@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head> 
+    <title>Current & Voltage Chart</title> <!-- 웹 페이지 제목 -->
+    <link rel="stylesheet" type="text/css" href="style.css">  <!-- 외부 CSS 파일 링크 -->
+</head>
+
+<body>
+
+<!-- 중앙 정렬된 제목 -->
+<div style="align-items:center; width:60%; margin:auto;">	
+    <h1>Current & Voltage Chart</h1>
+</div>
+		
+<!-- 그리드 컨테이너로 구성된 레이아웃 -->
+<div class="grid-container">
+    <!-- 전류 통계 표시 영역 -->
+	<div class="istats">
+		<fieldset><legend>Current</legend> <!-- 전류 레전드 -->
+			<p id="istats">iStats</p> <!-- 전류 통계 표시 -->
+		</fieldset>
+	</div>
+	
+    <!-- 차트를 표시하는 영역 -->
+	<div class="chrt">
+	    <canvas id="myChart" style="background-color:white;"> </canvas> <!-- 차트 그리기 -->
+	    <p>
+        <section class="range-slider"> <!-- 슬라이더 영역 -->
+            <span class="rangeValues" style="text-align:center"></span> <!-- 슬라이더 값 표시 -->
+            <input id="slider0" value="0.0" step="0.5" min="0.0" max="1000.0" type="range" /> <!-- 첫 번째 슬라이더 -->
+            <input id="slider1" value="1000.0" step="0.5" min="0.0" max="1000.0" type="range" /> <!-- 두 번째 슬라이더 -->
+        </section>
+		</p>
+	</div>  
+	
+    <!-- 전압 통계 표시 영역 -->
+	<div class="vstats">
+		<fieldset><legend>Voltage</legend> <!-- 전압 레전드 -->
+			<p id="vstats">vStats</p> <!-- 전압 통계 표시 -->
+		</fieldset>
+	</div>
+</div>	
+
+<p>
+<!-- 데이터 캡처 관련 설정 -->
+<div class="capture" >
+	<table>
+	<tr>
+		<td><label for="cfgInx">Sample Rate</label></td> <!-- 샘플 레이트 레이블 -->
+		<td>
+			<select id="cfgInx" name="cfgInx" class="cfg-select" onchange="on_sample_rate_change(this)"> <!-- 샘플 레이트 선택 -->
+				<option value="0" selected>2000Hz : avg=1, vadc=204us, sadc=204uS</option>
+				<option value="1">1000Hz : avg=1, vadc=332uS, sadc=332uS</option>
+				<option value="2">400Hz : avg=4, vadc=204uS, sadc=204uS</option>
+			</select>
+		</td>
+		<td></td>
+		<td></td>
+		<td></td>
+	</tr>
+
+	<tr>
+		<td><label for="scale">Current Full-Scale [Resolution]</label></td> <!-- 전류 풀 스케일 레이블 -->
+		<td>
+			<select id="scale" name="scale" class="scale-select"> <!-- 전류 풀 스케일 선택 -->
+				<option value="0" selected>1638.35mA [50uA]</option>
+				<option value="1">78.017mA [2.4uA]</option>
+			</select>
+		</td>
+		<td><button style="margin-left:40px;margin-right:40px;" id="capture">Capture</button></td> <!-- 데이터 캡처 버튼 -->
+		<td>
+			<div id="led" class="led-box"> <!-- LED 상태 표시 박스 -->
+				<div class="led-green"></div> <!-- LED 그린 -->
+			</div>
+		</td>
+		<td><button style="margin-left:40px;" id="captureGated">Capture Gated</button></td> <!-- 데이터 캡처 게이티드 버튼 -->
+	</tr>
+
+	<tr>
+		<td>Capture Seconds</td> <!-- 캡처 초 레이블 -->
+		<td><input type="number" name="captureSecs" id="captureSecs" value="1" min="1" max="8"></td> <!-- 캡처 시간 입력 -->
+		<td></td>
+		<td></td>
+		<td></td>	
+	</tr>
+	</table>		
+</div>
+
+<!-- JavaScript 라이브러리 로드 -->
+<!-- <script src="reconnecting-websocket.min.js"></script> --> <!-- WebSocket 재연결 라이브러리 (주석 처리됨) -->
+<!-- chart.min.js v3.7.0 -->
+<script src="chart.min.js"></script> <!-- Chart.js 라이브러리 -->
+<!-- chartjs-plugin-streaming.min.js v2.0.0 -->
+<script src="chartjs-plugin-streaming.min.js"></script> <!-- Chart.js 스트리밍 플러그인 -->
+<script src="capture_cv_chart.js"></script> <!-- 사용자 정의 JavaScript 파일 -->
+</body>
+</html>
