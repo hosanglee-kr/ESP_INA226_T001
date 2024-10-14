@@ -1,0 +1,65 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+<title>ESP32 Multi-Meter</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta charset="UTF-8">
+<link rel="stylesheet" type="text/css" href="style.css">
+</head>
+<body>
+
+<div style="align-items:center;">	
+<h1>ESP32 Multi-Meter</h1>
+</div>
+
+<p>
+
+<div style="text-align:center;">
+	<span>Firmware Revision : </span><span id="fwRev">%FW_REV%</span>
+</div>
+
+<p>
+	<div style="text-align:center;">
+		<a href="/cv_meter"><button style="width:250px;">Current & Voltage Meter</button></a>
+	</div>
+</p>
+
+<div style="text-align:center;">
+	<a href="/cv_chart"><button style="width:250px;">Current & Voltage Chart</button></a>
+</div>
+
+
+<p>
+<div style="text-align:center;">
+	<a href="/freq_counter"><button style="width:250px;">Frequency Counter & Oscillator</button></a>
+</div>
+
+<p>
+		
+<div class="wifi">
+<fieldset><legend>WiFi Access Point Credentials</legend>
+<form action="/get">
+
+<div>
+<table style="width:500px;">
+<tr><td>SSID</td><td><input type="text" name="ssid" value="%SSID%"></td></tr>
+<tr><td>Password</td><td><input type="password" name="password" value="%PASSWORD%"></td></tr>
+</table>
+</div>
+<p>
+<div>
+<input type="submit" value="Submit" class="form-submit">
+</div>
+
+</form>
+</fieldset>
+</div>
+
+<p>
+
+<div style="text-align:center;">
+	<a href="/restart"><button style="width:250px;">Restart</button></a>
+</div>
+	
+</body>
+</html>

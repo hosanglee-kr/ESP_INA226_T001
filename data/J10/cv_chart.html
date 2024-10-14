@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head> 
+<title>Current & Voltage Chart</title>
+<link rel="stylesheet" type="text/css" href="style.css">  
+</head>
+
+<body>
+
+<div style="align-items:center; width:60%; margin:auto;">	
+<h1>Current & Voltage Chart</h1>
+</div>
+		
+<div class="grid-container">
+	<div class="istats">
+		<fieldset><legend>Current</legend>
+		<p id="istats">iStats</p>
+		</fieldset>
+	</div>
+	<div class="chrt">
+	  <canvas id="myChart" style="background-color:white;"> </canvas>
+	  <p>
+      <section class="range-slider">
+        <span class="rangeValues" style="text-align:center"></span>
+        <input id="slider0" value="0.0" step="0.5" min="0.0" max="1000.0" type="range" />
+        <input id="slider1" value="1000.0" step="0.5" min="0.0" max="1000.0" type="range" />
+      </section>
+	</div>  
+	<div class="vstats">
+		<fieldset><legend>Voltage</legend>
+		<p id="vstats">vStats</p>
+		</fieldset>
+	</div>
+</div>	
+<p>
+<div class="capture" >
+	<table>
+	<tr>
+	<td><label for="cfgInx">Sample Rate</label></td>
+	<td>
+		<select id="cfgInx" name="cfgInx" class="cfg-select" onchange="on_sample_rate_change(this)">
+			<option value="0" "selected">2000Hz : avg=1, vadc=204us, sadc=204uS</option>
+			<option value="1" >1000Hz : avg=1, vadc=332uS, sadc=332uS</option>
+			<option value="2" >400Hz : avg=4, vadc=204uS, sadc=204uS</option>
+		</select>
+	</td>
+	<td></td>
+	<td></td>
+	<td></td>
+	</tr>
+
+	<tr>
+	<td><label for="scale">Current Full-Scale [Resolution]</label></td>
+	<td>
+		<select id="scale" name="scale" class="scale-select">
+			<option value="0" "selected">1638.35mA [50uA]</option>
+			<option value="1">78.017mA [2.4uA]</option>
+		</select>
+	</td>
+	<td><button  style="margin-left:40px;margin-right:40px;" id="capture">Capture</button></td>
+	<td><div id="led" class="led-box">
+			<div class="led-green"></div>
+		</div>
+	</td>
+	<td><button  style="margin-left:40px;"id="captureGated">Capture Gated</button></td>
+	</tr>
+
+	<tr>
+	<td>Capture Seconds</td>
+	<td><input type="number" name="captureSecs" id="captureSecs" value="1" min="1" max="8"></td>
+	<td></td>
+	<td></td>
+	<td></td>	
+
+	</tr>
+	</table>		
+</div>
+
+</body>
+</html>
+
+<!-- <script src="reconnecting-websocket.min.js"></script> -->
+<!-- chart.min.js v3.7.0 -->
+<script src="chart.min.js"></script>
+<!-- chartjs-plugin-streaming.min.js v2.0.0 -->
+<script src="chartjs-plugin-streaming.min.js"></script>
+<script src="capture_cv_chart.js"></script>
+
