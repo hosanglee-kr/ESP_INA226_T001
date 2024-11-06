@@ -9,21 +9,15 @@
 #include <driver/pcnt.h>                      // ESP32 PCNT (Pulse Counter) 라이브러리
 #include "config.h"                           // 프로젝트 설정 관련 헤더
 
-// 주파수 측정을 위한 전역 변수들
-extern volatile bool FreqReadyFlag;           // 주파수 측정 완료 플래그
-extern volatile bool FreqCaptureFlag;         // 주파수 캡처 플래그
-extern volatile int FrequencyHz;              // 측정된 주파수 값 (Hz)
 
 #define MSG_TX_FREQUENCY 5555                 // 메시지 전송 시 사용할 식별자
 
-// 주파수 발생기 관련 전역 변수들
-extern uint32_t OscFreqHz;                    // 주파수 발생기 설정 값
-extern bool OscFreqFlag;                      // 주파수 발생기 재설정 플래그
+
 
 // 주파수 측정 타스크 함수 정의
-void frequency_task(void* pvParam);
+void J300_task_freq_counter(void* pvParam);
 
-#endif // FREQ_METER_H_
+
 
 // -------- freq_counter.cpp 구현부 --------
 
@@ -39,12 +33,14 @@ static const char* TAG = "freq_meter";
 #define OUTPUT_CONTROL_GPIO   GPIO_NUM_32     // 출력 제어 GPIO 핀 32
 #define PCNT_H_LIM_VAL        overflow        // Pulse Counter overflow 값
 
+
 // 주파수 측정 관련 전역 변수들
 volatile bool FreqReadyFlag = false;          // 주파수 측정 완료 플래그
 volatile bool FreqCaptureFlag = false;        // 주파수 캡처 플래그
-volatile int  FrequencyHz = 0;                // 주파수 값 (Hz)
+volatile int  FrequencyHz = 0;                // 측정된 주파수 값 (Hz)
 volatile SemaphoreHandle_t FreqSemaphore;     // 주파수 측정 완료를 위한 세마포어
 
+// 주파수 발생기 관련 전역 변수들
 uint32_t OscFreqHz = 23456;                   // 주파수 발생기 초기 주파수 값 (1Hz~40MHz)
 bool OscFreqFlag = false;                     // 주파수 발생기 플래그
 
@@ -63,11 +59,24 @@ esp_timer_handle_t timer_handle;              // 타이머 핸들러
 
 portMUX_TYPE timerMux = portMUX_INITIALIZER_UNLOCKED; // 타이머 동기화용 뮤텍스
 
+
+
+static void read_PCNT(void *p);                                 // Read Pulse Counter
+static char *ultos_recursive(unsigned long val, char *s, unsigned radix, int pos); // Format an unsigned long (32 bits) into a string
+static char *ltos(long val, char *s, int radix);                // Format an long (32 bits) into a string
+static void init_PCNT(void);                                    // Initialize and run PCNT unit
+static void IRAM_ATTR pcnt_intr_handler(void *arg);             // Counting overflow pulses
+static void init_osc_freq ();                                   // Initialize Oscillator to test Freq Meter
+static void init_frequency_meter ();
+
+
 // 주파수 발생기를 초기화하는 함수
 static void init_osc_freq() {
 	resolution = (log(80000000 / OscFreqHz) / log(2)) / 2;  // 주파수에 따른 해상도 계산
 	if (resolution < 1) resolution = 1;                     // 최소 해상도 설정
+	// Serial.println(resolution);                               // Print
 	mDuty = (pow(2, resolution)) / 2;                       // 듀티 사이클 50%로 설정
+	// Serial.println(mDuty);                                    // Print
 
 	ledc_timer_config_t ledc_timer = {};                    // LEDC 타이머 설정
 	ledc_timer.duty_resolution = ledc_timer_bit_t(resolution);  // 해상도 설정
@@ -97,6 +106,7 @@ static void IRAM_ATTR pcnt_intr_handler(void *arg) {
 // Pulse Counter 초기화 함수
 static void init_PCNT(void) {
 	pcnt_config_t pcnt_config = {};         // Pulse Counter 설정 구조체 초기화
+	
 	pcnt_config.pulse_gpio_num = PCNT_INPUT_SIG_IO; // Pulse 입력 핀 (GPIO 34)
 	pcnt_config.ctrl_gpio_num = PCNT_INPUT_CTRL_IO; // 제어 입력 핀 (GPIO 35)
 	pcnt_config.unit = PCNT_COUNT_UNIT;     // Pulse Counter Unit 0
@@ -137,12 +147,49 @@ static void init_frequency_meter() {
 	gpio_matrix_in(PCNT_INPUT_SIG_IO, SIG_IN_FUNC226_IDX, false); // GPIO 매트릭스 설정
 }
 
+
+#if 0
+// Format an unsigned long (32 bits) into a string
+static char *ultos_recursive(unsigned long val, char *s, unsigned radix, int pos) {
+	int c;
+	if (val >= radix) {
+		s = ultos_recursive(val / radix, s, radix, pos + 1);
+		}
+	c = val % radix;
+	c += (c < 10 ? '0' : 'a' - 10);
+	*s++ = c;
+	if (pos % 3 == 0) {
+		*s++ = ',';
+		}
+	return s;
+	}
+
+
+// Format an long (32 bits) into a string
+static char *ltos(long val, char *s, int radix) {              
+	if (radix < 2 || radix > 36) {
+		s[0] = 0;
+		} 
+	else {
+		char *p = s;
+		if (radix == 10 && val < 0) {
+			val = -val;
+			*p++ = '-';
+			}
+		p = ultos_recursive(val, p, radix, 0) - 1;
+		*p = 0;
+		}
+	return s;
+	}
+#endif
+
 // 주파수 측정을 위한 타스크
-void frequency_task(void* pvParam) {
-    ESP_LOGI(TAG, "frequency_task running on core %d with priority %d", xPortGetCoreID(), uxTaskPriorityGet(NULL));
+void J300_task_freq_counter(void* pvParam) {
+    ESP_LOGI(TAG, "J300_task_freq_counter running on core %d with priority %d", xPortGetCoreID(), uxTaskPriorityGet(NULL));
 
 	FreqSemaphore = xSemaphoreCreateBinary(); // 주파수 측정 세마포어 생성
 	init_frequency_meter();                   // 주파수 측정기 초기화
+	
 	esp_timer_start_periodic(timer_handle, sample_time); // 주기적으로 타이머 시작
 
 	while (true) {
@@ -163,3 +210,4 @@ void frequency_task(void* pvParam) {
 }
 
 
+#endif // FREQ_METER_H_

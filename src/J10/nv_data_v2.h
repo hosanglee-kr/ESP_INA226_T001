@@ -6,14 +6,21 @@
 #include <Arduino.h>
 #include <Preferences.h>
 
+
+
+// nv_data.cpp 구현부
+Preferences Prefs; // Preferences 객체 생성
+
 // OPTIONS_t 구조체 정의
 typedef struct {
     String ssid;      // Wi-Fi SSID
     String password;  // Wi-Fi 비밀번호
 } OPTIONS_t;
 
-// 외부 변수를 선언합니다.
-extern OPTIONS_t Options;
+OPTIONS_t Options; // OPTIONS_t 타입의 전역 변수 선언
+
+#define MODE_READ_WRITE false // 읽기/쓰기 모드
+#define MODE_READ_ONLY true    // 읽기 전용 모드
 
 // 함수 프로토타입 선언
 void nv_options_store(OPTIONS_t &options); // 옵션을 저장하는 함수
@@ -21,12 +28,6 @@ void nv_options_load(OPTIONS_t &options);  // 옵션을 로드하는 함수
 void nv_options_reset(OPTIONS_t &options); // 옵션을 초기화하는 함수
 void nv_options_print(OPTIONS_t &options); // 옵션을 출력하는 함수
 
-// nv_data.cpp 구현부
-Preferences Prefs; // Preferences 객체 생성
-OPTIONS_t Options; // OPTIONS_t 타입의 전역 변수 선언
-
-#define MODE_READ_WRITE false // 읽기/쓰기 모드
-#define MODE_READ_ONLY true    // 읽기 전용 모드
 
 // 옵션을 로드하는 함수
 void nv_options_load(OPTIONS_t &options) {

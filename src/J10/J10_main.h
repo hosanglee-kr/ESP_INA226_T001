@@ -18,7 +18,7 @@
 #include <LittleFS.h>
 #include "config_v2.h"
 #include "nv_data_v2.h"
-#include "wifi_cfg_v2.h"
+#include  "wifi" "wifi_cfg_v2.h"
 #include "ina226_v2.h"
 #include "freq_counter_v2.h"
 
@@ -81,7 +81,7 @@ void setup() {
 	// Wi-Fi 태스크 생성 (코어 0에서 실행)
     xTaskCreatePinnedToCore(&wifi_task, "wifi_task", 4096, NULL, WIFI_TASK_PRIORITY, NULL, CORE_0);
     // 주파수 측정 태스크 생성 (코어 1에서 실행)
-	xTaskCreatePinnedToCore(&frequency_task, "freq_task", 4096, NULL, FREQUENCY_TASK_PRIORITY, NULL, CORE_1);
+	xTaskCreatePinnedToCore(&J300_task_freq_counter, "freq_task", 4096, NULL, FREQUENCY_TASK_PRIORITY, NULL, CORE_1);
     // 전류/전압 측정 태스크 생성 (코어 1에서 실행)
 	xTaskCreatePinnedToCore(&current_voltage_task, "cv_task", 4096, NULL, CURRENT_VOLTAGE_TASK_PRIORITY, NULL, CORE_1);
 
