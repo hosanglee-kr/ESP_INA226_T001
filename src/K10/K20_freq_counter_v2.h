@@ -27,7 +27,7 @@ bool OscFreqFlag = false;                     // 주파수 발생기 플래그
 
 
 // 주파수 측정 타스크 함수 정의
-void J300_task_freq_counter(void* pvParam);
+void K20_task_freq_counter(void* pvParam);
 
 
 
@@ -190,7 +190,7 @@ static char *ltos(long val, char *s, int radix) {
 #endif
 
 // 주파수 측정을 위한 타스크
-void J300_task_freq_counter(void* pvParam) {
+void K20_task_freq_counter(void* pvParam) {
     ESP_LOGI(G_K20_TAG, "J300_task_freq_counter running on core %d with priority %d", xPortGetCoreID(), uxTaskPriorityGet(NULL));
 
 	FreqSemaphore = xSemaphoreCreateBinary(); // 주파수 측정 세마포어 생성

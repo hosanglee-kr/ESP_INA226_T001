@@ -49,9 +49,9 @@ int				   MaxSamples;	   // 측정할 수 있는 최대 샘플 수
 #define ST_FREQ_COMPLETE  5
 
 // 함수 선언
-static void wifi_task(void* pvParameter);			  // Wi-Fi 태스크
-static void current_voltage_task(void* pvParameter);  // 전류 및 전압 측정 태스크
-static void reset_flags();							  // 플래그 초기화 함수
+static void K10_wifi_task(void* pvParameter);			  // Wi-Fi 태스크
+static void K10_current_voltage_task(void* pvParameter);  // 전류 및 전압 측정 태스크
+static void K10_reset_flags();							  // 플래그 초기화 함수
 
 /*
  * setup 함수: 시스템 초기화 및 태스크 생성
@@ -80,11 +80,11 @@ void K10_init() {
 	Measure.mode = MODE_CURRENT_VOLTAGE;
 
 	// Wi-Fi 태스크 생성 (코어 0에서 실행)
-	xTaskCreatePinnedToCore(&wifi_task, "wifi_task", 4096, NULL, WIFI_TASK_PRIORITY, NULL, CORE_0);
+	xTaskCreatePinnedToCore(&K10_wifi_task, "wifi_task", 4096, NULL, WIFI_TASK_PRIORITY, NULL, CORE_0);
 	// 주파수 측정 태스크 생성 (코어 1에서 실행)
-	xTaskCreatePinnedToCore(&J300_task_freq_counter, "freq_task", 4096, NULL, FREQUENCY_TASK_PRIORITY, NULL, CORE_1);
+	xTaskCreatePinnedToCore(&K20_task_freq_counter, "freq_task", 4096, NULL, FREQUENCY_TASK_PRIORITY, NULL, CORE_1);
 	// 전류/전압 측정 태스크 생성 (코어 1에서 실행)
-	xTaskCreatePinnedToCore(&current_voltage_task, "cv_task", 4096, NULL, CURRENT_VOLTAGE_TASK_PRIORITY, NULL, CORE_1);
+	xTaskCreatePinnedToCore(&K10_current_voltage_task, "cv_task", 4096, NULL, CURRENT_VOLTAGE_TASK_PRIORITY, NULL, CORE_1);
 
 	// Arduino 기본 loopTask 삭제 (사용하지 않으므로 제거)
 	vTaskDelete(NULL);
@@ -101,7 +101,7 @@ void K10_run() {
  * 플래그 초기화 함수
  * - 각종 상태 플래그를 초기화하여 통신 및 측정 상태를 리셋
  */
-void reset_flags() {
+void K10_reset_flags() {
 	DataReadyFlag	  = false;
 	GateOpenFlag	  = false;
 	EndCaptureFlag	  = false;
@@ -115,7 +115,7 @@ void reset_flags() {
  * - 웹 서버를 시작하고, 웹소켓을 통해 클라이언트와 실시간 데이터를 주고받음
  * - 클라이언트로부터의 요청에 따라 전류/전압 또는 주파수 데이터를 측정하고 전송
  */
-static void wifi_task(void* pVParameter) {
+static void K10_wifi_task(void* pVParameter) {
 	ESP_LOGD(G_K10_TAG, "wifi_task running on core %d with priority %d", xPortGetCoreID(), uxTaskPriorityGet(NULL));
 	ESP_LOGI(G_K10_TAG, "Starting web server");
 
@@ -135,7 +135,7 @@ static void wifi_task(void* pVParameter) {
 	volatile int16_t* pb;
 	int16_t			  msg;
 	uint32_t		  t1, t2;  // 전송 시간 측정 변수
-	reset_flags();			   // 상태 플래그 초기화
+	K10_reset_flags();			   // 상태 플래그 초기화
 
 	// 메인 루프: 웹소켓 클라이언트와의 통신 처리
 	while (1) {
@@ -206,7 +206,7 @@ static void wifi_task(void* pVParameter) {
 								ESP_LOGD(G_K10_TAG, "Socket msg : Tx Complete");
 								msg = MSG_TX_COMPLETE;					 // 전송 완료 메시지
 								ws.binary(ClientID, (uint8_t*)&msg, 2);	 // 클라이언트로 전송 완료 메시지 전송
-								reset_flags();							 // 플래그 초기화
+								K10_reset_flags();							 // 플래그 초기화
 								state		 = ST_IDLE;					 // 대기 상태로 전환
 								TxSamples	 = 0;						 // 전송할 샘플 수 초기화
 								bufferOffset = 0;						 // 버퍼 오프셋 초기화
@@ -215,7 +215,7 @@ static void wifi_task(void* pVParameter) {
 
 						case ST_METER_COMPLETE:				  // 전류/전압 측정 완료 상태
 							if (LastPacketAckFlag == true) {  // 마지막 패킷에 대한 ACK 수신
-								reset_flags();				  // 플래그 초기화
+								K10_reset_flags();				  // 플래그 초기화
 								state = ST_IDLE;			  // 대기 상태로 전환
 							}
 							break;
@@ -243,7 +243,7 @@ static void wifi_task(void* pVParameter) {
 
 						case ST_FREQ_COMPLETE:				  // 주파수 전송 완료 상태
 							if (LastPacketAckFlag == true) {  // 마지막 패킷에 대한 ACK 수신
-								reset_flags();				  // 플래그 초기화
+								K10_reset_flags();				  // 플래그 초기화
 								state = ST_IDLE;			  // 대기 상태로 전환
 							}
 							break;
@@ -252,7 +252,7 @@ static void wifi_task(void* pVParameter) {
 			}
 		} else {
 			// 소켓 연결 해제 시, 상태 및 플래그 초기화
-			reset_flags();
+			K10_reset_flags();
 			Measure.mode = MODE_INVALID;  // 측정 모드를 무효로 설정
 			state		 = ST_IDLE;		  // 대기 상태로 전환
 		}
@@ -265,7 +265,7 @@ static void wifi_task(void* pVParameter) {
  * - I2C 통신을 사용하여 INA226 센서에서 데이터를 읽고, 클라이언트에 전송
  * - 설정된 샘플링 주기와 샘플 수에 따라 데이터를 수집
  */
-static void current_voltage_task(void* pvParameter) {
+static void K10_current_voltage_task(void* pvParameter) {
 	ESP_LOGI(G_K10_TAG, "current_voltage_task running on core %d with priority %d", xPortGetCoreID(), uxTaskPriorityGet(NULL));
 	CVCaptureFlag = false;
 
