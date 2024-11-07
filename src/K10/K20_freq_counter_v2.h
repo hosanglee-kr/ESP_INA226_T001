@@ -10,8 +10,20 @@
 #include "config.h"                           // 프로젝트 설정 관련 헤더
 
 
+// 주파수 측정 관련 전역 변수들
+volatile bool FreqReadyFlag = false;          // 주파수 측정 완료 플래그
+volatile bool FreqCaptureFlag = false;        // 주파수 캡처 플래그
+volatile int  FrequencyHz = 0;                // 측정된 주파수 값 (Hz)
+
+volatile SemaphoreHandle_t FreqSemaphore;     // 주파수 측정 완료를 위한 세마포어
+
+
 #define MSG_TX_FREQUENCY 5555                 // 메시지 전송 시 사용할 식별자
 
+
+// 주파수 발생기 관련 전역 변수들
+uint32_t OscFreqHz = 23456;                   // 주파수 발생기 초기 주파수 값 (1Hz~40MHz)
+bool OscFreqFlag = false;                     // 주파수 발생기 플래그
 
 
 // 주파수 측정 타스크 함수 정의
@@ -22,11 +34,12 @@ void J300_task_freq_counter(void* pvParam);
 // -------- freq_counter.cpp 구현부 --------
 
 // ESP32 주파수 카운터 초기화 및 설정
-static const char* TAG = "freq_meter";
+static const char* G_K20_TAG = "freq_meter";
 
 // Pulse Counter 설정 상수
 #define PCNT_COUNT_UNIT       PCNT_UNIT_0     // Pulse Counter Unit 0
 #define PCNT_COUNT_CHANNEL    PCNT_CHANNEL_0  // Pulse Counter Channel 0
+
 #define PCNT_INPUT_SIG_IO     GPIO_NUM_34     // 주파수 입력 GPIO 핀 34
 #define LEDC_HS_CH0_GPIO      GPIO_NUM_33     // LEDC 출력 핀 33 (주파수 발생기 출력)
 #define PCNT_INPUT_CTRL_IO    GPIO_NUM_35     // Pulse Counter 제어 핀 35
@@ -34,15 +47,6 @@ static const char* TAG = "freq_meter";
 #define PCNT_H_LIM_VAL        overflow        // Pulse Counter overflow 값
 
 
-// 주파수 측정 관련 전역 변수들
-volatile bool FreqReadyFlag = false;          // 주파수 측정 완료 플래그
-volatile bool FreqCaptureFlag = false;        // 주파수 캡처 플래그
-volatile int  FrequencyHz = 0;                // 측정된 주파수 값 (Hz)
-volatile SemaphoreHandle_t FreqSemaphore;     // 주파수 측정 완료를 위한 세마포어
-
-// 주파수 발생기 관련 전역 변수들
-uint32_t OscFreqHz = 23456;                   // 주파수 발생기 초기 주파수 값 (1Hz~40MHz)
-bool OscFreqFlag = false;                     // 주파수 발생기 플래그
 
 // Pulse Counter 관련 변수들
 uint32_t overflow = 20000;                    // Pulse Counter 최대 값
@@ -52,6 +56,8 @@ uint32_t sample_time = 999955;                // 샘플링 시간 (1초)
 uint32_t mDuty = 0;                           // 듀티 사이클 값 (50%)
 uint32_t resolution = 0;                      // 주파수 발생기의 해상도
 char buf[32];                                 // 문자열 버퍼
+
+
 
 // 타이머 설정을 위한 구조체
 esp_timer_create_args_t create_args;
@@ -185,7 +191,7 @@ static char *ltos(long val, char *s, int radix) {
 
 // 주파수 측정을 위한 타스크
 void J300_task_freq_counter(void* pvParam) {
-    ESP_LOGI(TAG, "J300_task_freq_counter running on core %d with priority %d", xPortGetCoreID(), uxTaskPriorityGet(NULL));
+    ESP_LOGI(G_K20_TAG, "J300_task_freq_counter running on core %d with priority %d", xPortGetCoreID(), uxTaskPriorityGet(NULL));
 
 	FreqSemaphore = xSemaphoreCreateBinary(); // 주파수 측정 세마포어 생성
 	init_frequency_meter();                   // 주파수 측정기 초기화
