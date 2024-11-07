@@ -116,6 +116,8 @@ static void	  index_page_handler(AsyncWebServerRequest *request);
 static void	  set_defaults_handler(AsyncWebServerRequest *request);
 static void	  get_handler(AsyncWebServerRequest *request);
 static void	  restart_handler(AsyncWebServerRequest *request);
+static void	  capture_handler(AsyncWebServerRequest *request);
+
 
 /*
  * 웹페이지의 변수(%txt%)를 치환하는 함수.
@@ -152,6 +154,18 @@ static void not_found_handler(AsyncWebServerRequest *request) {
 static void index_page_handler(AsyncWebServerRequest *request) {
 	request->send(LittleFS, "/index.html", String(), false, string_processor);	// HTML 파일 전송
 }
+
+static void cv_chart_handler(AsyncWebServerRequest *request) {
+    request->send(LittleFS, "/cv_chart.html", String(), false, string_processor);
+    }
+
+static void cv_meter_handler(AsyncWebServerRequest *request) {
+    request->send(LittleFS, "/cv_meter.html", String(), false, string_processor);
+    }
+
+static void freq_counter_handler(AsyncWebServerRequest *request) {
+    request->send(LittleFS, "/freq_counter.html", String(), false, string_processor);
+    }
 
 /*
  * 기본 설정을 재설정하는 핸들러.
@@ -314,6 +328,15 @@ void wifi_init() {
 	pServer->on("/get", HTTP_GET, get_handler);				   // GET 요청을 처리하여 클라이언트에서 SSID 및 비밀번호 변경 가능
 	pServer->on("/restart", HTTP_GET, restart_handler);		   // ESP32 재시작 요청을 처리하는 핸들러
 
+	//pServer->onNotFound(not_found_handler);
+        //pServer->on("/", HTTP_GET, index_page_handler);
+        pServer->on("/cv_chart", HTTP_GET, cv_chart_handler);
+        pServer->on("/cv_meter", HTTP_GET, cv_meter_handler);
+        pServer->on("/freq_counter", HTTP_GET, freq_counter_handler);
+        // pServer->on("/defaults", HTTP_GET, set_defaults_handler);
+        // pServer->on("/get", HTTP_GET, get_handler);
+        // pServer->on("/restart", HTTP_GET, restart_handler);
+	
 	// LittleFS 파일 시스템에서 정적 파일 제공 (예: HTML, CSS, JS 파일)
 	pServer->serveStatic("/", LittleFS, "/");
 
