@@ -110,7 +110,7 @@ void		  socket_handle_message(void *arg, uint8_t *data, size_t len);
 static void	  wifi_start_as_ap();
 static void	  wifi_start_as_station();
 static void	  wifi_start_as_station_static_IP();
-static String string_processor(const String &var);
+static String     string_processor(const String &var);
 static void	  not_found_handler(AsyncWebServerRequest *request);
 static void	  index_page_handler(AsyncWebServerRequest *request);
 static void	  set_defaults_handler(AsyncWebServerRequest *request);
@@ -152,19 +152,19 @@ static void not_found_handler(AsyncWebServerRequest *request) {
  * "/index.html" 파일을 브라우저에 전송합니다.
  */
 static void index_page_handler(AsyncWebServerRequest *request) {
-	request->send(LittleFS, "/index.html", String(), false, string_processor);	// HTML 파일 전송
+	request->send(LittleFS, "/J10/index.html", String(), false, string_processor);	// HTML 파일 전송
 }
 
 static void cv_chart_handler(AsyncWebServerRequest *request) {
-    request->send(LittleFS, "/cv_chart.html", String(), false, string_processor);
+    request->send(LittleFS, "/J10/cv_chart.html", String(), false, string_processor);
     }
 
 static void cv_meter_handler(AsyncWebServerRequest *request) {
-    request->send(LittleFS, "/cv_meter.html", String(), false, string_processor);
+    request->send(LittleFS, "/J10/cv_meter.html", String(), false, string_processor);
     }
 
 static void freq_counter_handler(AsyncWebServerRequest *request) {
-    request->send(LittleFS, "/freq_counter.html", String(), false, string_processor);
+    request->send(LittleFS, "/J10/freq_counter.html", String(), false, string_processor);
     }
 
 /*
