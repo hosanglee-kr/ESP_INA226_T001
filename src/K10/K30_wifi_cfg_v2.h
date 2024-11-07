@@ -73,10 +73,12 @@
 #include <LittleFS.h>
 #include <WiFi.h>
 
+#include "K00_config_v2"
+//#include "config.h"
 #include "K20_freq_counter_v2.h"
 #include "K40_ina226_v2.h"
 #include "K50_nv_data_v2.h"
-#include "config.h"
+
 
 static const char *G_K30_TAG = "wifi_cfg";	// ESP32 로그 태그
 
