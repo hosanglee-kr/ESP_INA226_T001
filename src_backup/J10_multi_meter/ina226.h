@@ -34,7 +34,9 @@ extern int MaxSamples;
 extern volatile bool GateOpenFlag;
 extern volatile bool DataReadyFlag;
 extern volatile int TxSamples;
-extern volatile bool EndCaptureFlag;
+
+//extern volatile bool EndCaptureFlag;
+
 extern volatile bool MeterReadyFlag;
 
 void	ina226_write_reg(uint8_t regAddr, uint16_t data);

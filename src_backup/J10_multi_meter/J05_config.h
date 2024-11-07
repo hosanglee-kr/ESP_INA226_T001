@@ -14,6 +14,17 @@
 #define pinAlert		5   // INA226의 알림 핀 (전류/전압 초과 등 이벤트 발생 시)
 #define pinLED			14  // 상태 LED를 제어하는 핀
 
+
+typedef enum {
+	  MODE_CURRENT_VOL
+	, MODE_FREQ
+	, MODE_INVAL
+} MeasureMode;
+
+// int main ( ) {
+// 	MeasureMode ds1; //ok
+// }
+ 
 // 측정 모드 정의
 #define MODE_CURRENT_VOLTAGE 	11  // 전류 및 전압 측정 모드
 #define MODE_FREQUENCY			22  // 주파수 측정 모드

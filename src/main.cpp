@@ -4,17 +4,24 @@
 
 
 //#define		I10_INA
-
 #ifdef I10_INA
-	#include "I10_INA226_demo_001.h"
+	#include "I10/I10_INA226_demo_001.h" 
 #endif
 
-#define     J10_MULTI_METER
 
-
+//#define     J10_MULTI_METER
 #ifdef J10_MULTI_METER
 	#include "J10_multi_meter/J100_main.h"
 #endif
+
+
+#define     K10_MULTI_METER_T2     // MULTI_METER type 2
+#ifdef K10_MULTI_METER_T2
+	#include "K10/K10_main.h"
+#endif
+
+
+
 
 void setup(){
     Serial.begin(115200);
@@ -28,6 +35,12 @@ void setup(){
     #ifdef J10_MULTI_METER
 	    J100_init();
     #endif
+
+
+    #ifdef K10_MULTI_METER_T2
+        K10_init();
+    #endif
+
 }
 
 void loop(){
@@ -37,5 +50,9 @@ void loop(){
 
     #ifdef J10_MULTI_METER
 	    J100_run();
+    #endif
+
+    #ifdef K10_MULTI_METER_T2
+        K10_run();
     #endif
 }

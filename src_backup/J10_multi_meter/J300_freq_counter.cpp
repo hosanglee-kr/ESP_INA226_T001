@@ -136,7 +136,7 @@ static void init_frequency_meter (){
 	esp_timer_create(&create_args, &timer_handle);                          // Create esp-timer instance
 
 	gpio_matrix_in(PCNT_INPUT_SIG_IO, SIG_IN_FUNC226_IDX, false);           // Set GPIO matrin IN - Freq Meter input
-	}
+}
 
 #if 0
 // Format an unsigned long (32 bits) into a string
@@ -178,9 +178,11 @@ void J300_task_freq_counter(void* pvParam){
 
 	FreqSemaphore = xSemaphoreCreateBinary();
 	init_frequency_meter();
+
 	pcnt_counter_clear(PCNT_COUNT_UNIT);               // Clear Pulse Counter
 	esp_timer_start_once(timer_handle, sample_time);   // Initialize High resolution timer (1 sec)
 	gpio_set_level(OUTPUT_CONTROL_GPIO, 1);            // Set enable PCNT count
+	
 	while (1) {
         xSemaphoreTake(FreqSemaphore, portMAX_DELAY); 
 		FrequencyHz = (pulses + (multPulses * overflow)) / 2  ;  // Calculation of FrequencyHz

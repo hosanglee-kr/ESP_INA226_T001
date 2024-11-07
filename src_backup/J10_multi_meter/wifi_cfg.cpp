@@ -241,8 +241,10 @@ void socket_handle_message(void *arg, uint8_t *data, size_t len) {
 			FreqCaptureFlag = true;
 			// ESP_LOGI(TAG,"cmd = f");
 		} else {
-			const uint8_t			 size = JSON_OBJECT_SIZE(4);
-			StaticJsonDocument<size> json;
+			JsonDocument	json;
+			// const uint8_t			 size = JSON_OBJECT_SIZE(4);
+			// StaticJsonDocument<size> json;
+
 			DeserializationError	 err = deserializeJson(json, data);
 			if (err) {
 				ESP_LOGI(TAG, "deserializeJson() failed with code %s", err.c_str());
