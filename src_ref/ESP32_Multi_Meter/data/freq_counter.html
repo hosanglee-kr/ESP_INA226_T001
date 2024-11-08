@@ -1,0 +1,28 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+<title>Frequency Counter & Oscillator</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta charset="UTF-8">
+<link rel="stylesheet" type="text/css" href="style.css">
+</head>
+<body>
+
+<div style="align-items:center; width:60%; margin:auto;">	
+<h1>Frequency Counter & Oscillator</h1>
+</div>
+
+<p>
+
+	<p class="frequency" name="hz" id="hz">0 Hz</p>
+<p>
+	<table>
+		<tr>
+			<td>Oscillator Frequency (Hz)</td>
+			<td><input type="number" style="width:6em" name="oscfreq" id="oscfreq" value="23456" min="1" max="40000000" onchange="on_osc_freq_change(this)"></td>
+		</tr>
+	</table>
+
+</body>
+</html>
+<script src="capture_frequency.js"></script>
