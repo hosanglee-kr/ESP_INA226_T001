@@ -78,7 +78,7 @@
 #include "K20_freq_counter_v2.h"
 #include "K40_ina226_v2.h"
 #include "K50_nv_data_v2.h"
-#include "config.h"
+
 
 static const char *G_K30_TAG = "wifi_cfg";	// ESP32 로그 태그
 
@@ -112,12 +112,14 @@ void		  socket_handle_message(void *arg, uint8_t *data, size_t len);
 static void	  wifi_start_as_ap();
 static void	  wifi_start_as_station();
 static void	  wifi_start_as_station_static_IP();
-static String string_processor(const String &var);
+static String     string_processor(const String &var);
 static void	  not_found_handler(AsyncWebServerRequest *request);
 static void	  index_page_handler(AsyncWebServerRequest *request);
 static void	  set_defaults_handler(AsyncWebServerRequest *request);
 static void	  get_handler(AsyncWebServerRequest *request);
 static void	  restart_handler(AsyncWebServerRequest *request);
+static void	  capture_handler(AsyncWebServerRequest *request);
+
 
 /*
  * 웹페이지의 변수(%txt%)를 치환하는 함수.
@@ -152,8 +154,20 @@ static void not_found_handler(AsyncWebServerRequest *request) {
  * "/index.html" 파일을 브라우저에 전송합니다.
  */
 static void index_page_handler(AsyncWebServerRequest *request) {
-	request->send(LittleFS, "/index.html", String(), false, string_processor);	// HTML 파일 전송
+	request->send(LittleFS, "/J10/index.html", String(), false, string_processor);	// HTML 파일 전송
 }
+
+static void cv_chart_handler(AsyncWebServerRequest *request) {
+    request->send(LittleFS, "/J10/cv_chart.html", String(), false, string_processor);
+    }
+
+static void cv_meter_handler(AsyncWebServerRequest *request) {
+    request->send(LittleFS, "/J10/cv_meter.html", String(), false, string_processor);
+    }
+
+static void freq_counter_handler(AsyncWebServerRequest *request) {
+    request->send(LittleFS, "/J10/freq_counter.html", String(), false, string_processor);
+    }
 
 /*
  * 기본 설정을 재설정하는 핸들러.
@@ -316,6 +330,15 @@ void wifi_init() {
 	pServer->on("/get", HTTP_GET, get_handler);				   // GET 요청을 처리하여 클라이언트에서 SSID 및 비밀번호 변경 가능
 	pServer->on("/restart", HTTP_GET, restart_handler);		   // ESP32 재시작 요청을 처리하는 핸들러
 
+	//pServer->onNotFound(not_found_handler);
+        //pServer->on("/", HTTP_GET, index_page_handler);
+        pServer->on("/cv_chart", HTTP_GET, cv_chart_handler);
+        pServer->on("/cv_meter", HTTP_GET, cv_meter_handler);
+        pServer->on("/freq_counter", HTTP_GET, freq_counter_handler);
+        // pServer->on("/defaults", HTTP_GET, set_defaults_handler);
+        // pServer->on("/get", HTTP_GET, get_handler);
+        // pServer->on("/restart", HTTP_GET, restart_handler);
+	
 	// LittleFS 파일 시스템에서 정적 파일 제공 (예: HTML, CSS, JS 파일)
 	pServer->serveStatic("/", LittleFS, "/");
 
