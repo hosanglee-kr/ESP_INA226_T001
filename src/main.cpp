@@ -2,7 +2,7 @@
 
 
 
-
+// https://github.com/RobTillaart/INA226
 //#define		I10_INA
 #ifdef I10_INA
 	#include "I10/I10_INA226_demo_001.h" 
@@ -14,7 +14,7 @@
 	#include "J10_multi_meter/J100_main.h"
 #endif
 
-
+// https://github.com/har-in-air/ESP32_MULTI_METER
 #define     K10_MULTI_METER_T2     // MULTI_METER type 2
 #ifdef K10_MULTI_METER_T2
 	#include "K10/K10_main.h"
