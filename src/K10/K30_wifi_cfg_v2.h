@@ -119,7 +119,7 @@ static void	  index_page_handler(AsyncWebServerRequest *request);
 static void	  set_defaults_handler(AsyncWebServerRequest *request);
 static void	  get_handler(AsyncWebServerRequest *request);
 static void	  restart_handler(AsyncWebServerRequest *request);
-static void	  capture_handler(AsyncWebServerRequest *request);
+// static void	  capture_handler(AsyncWebServerRequest *request);
 
 
 /*
