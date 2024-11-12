@@ -137,7 +137,9 @@ static void K10_wifi_task(void* pVParameter) {
 	}
 
 	// Wi-Fi 및 웹소켓 초기화 (웹 서버 및 웹소켓 서버 시작)
-	wifi_init();
+	K10_wifi_init();
+
+	K10_AsyncWebSrv_init();
 
 	K10_SYSTEM_STATE_TYPE g_K10_System_State		   = K10_ST_IDLE;  	// 상태 초기화 (대기 상태)
 	//int				  g_K10_System_State		   = ST_IDLE;  		// 상태 초기화 (대기 상태)
