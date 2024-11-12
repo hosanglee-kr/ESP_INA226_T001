@@ -24,8 +24,8 @@
 #include "K50_nv_data_v2.h"
 
 // 펌웨어 버전 및 로그 태그 설정
-const char*		   FwRevision = "0.97";
-static const char* G_K10_TAG  = "main";
+const char*		   G_K10_Firmware_Rev = "0.97";
+static const char* G_K10_TAG  = "K10_main";
 
 // 전역 변수 선언
 volatile int		 TxSamples;			   // 웹소켓으로 전송할 샘플 수
@@ -33,20 +33,30 @@ extern volatile bool SocketConnectedFlag;  // 웹소켓 연결 상태 플래그
 extern uint32_t		 ClientID;			   // 연결된 웹소켓 클라이언트 ID
 
 // 태스크 우선순위 설정
-#define WIFI_TASK_PRIORITY			  1
-#define CURRENT_VOLTAGE_TASK_PRIORITY (configMAX_PRIORITIES - 1)
-#define FREQUENCY_TASK_PRIORITY		  (configMAX_PRIORITIES - 2)
+#define G_K10_WIFI_TASK_PRIORITY			  1
+#define G_K10_CURRENT_VOLTAGE_TASK_PRIORITY (configMAX_PRIORITIES - 1)	// 24
+#define G_K10_FREQUENCY_TASK_PRIORITY		  (configMAX_PRIORITIES - 2)	// 23
 
 volatile MEASURE_t Measure;		   // 측정 데이터를 저장하는 구조체
 volatile int16_t*  Buffer = NULL;  // 측정 데이터를 저장할 버퍼
 int				   MaxSamples;	   // 측정할 수 있는 최대 샘플 수
 
+
+enum K10_SYSTEM_STATE_TYPE {
+			K10_ST_IDLE	= 1,
+			K10_ST_TX,
+			K10_ST_TX_COMPLETE,
+			K10_ST_METER_COMPLETE,
+			K10_ST_FREQ_COMPLETE,
+};
+
+
 // 시스템 상태 정의
-#define ST_IDLE			  1
-#define ST_TX			  2
-#define ST_TX_COMPLETE	  3
-#define ST_METER_COMPLETE 4
-#define ST_FREQ_COMPLETE  5
+// #define ST_IDLE			  1
+// #define ST_TX			  2
+// #define ST_TX_COMPLETE	  3
+// #define ST_METER_COMPLETE 4
+// #define ST_FREQ_COMPLETE  5
 
 // 함수 선언
 static void K10_wifi_task(void* pvParameter);			  // Wi-Fi 태스크
@@ -60,16 +70,16 @@ static void K10_reset_flags();							  // 플래그 초기화 함수
  */
 void K10_init() {
 	// 핀 설정
-	pinMode(pinAlert, INPUT);	// INA226의 알림 핀 (외부 풀업, active low)
-	pinMode(pinGate, INPUT);	// 측정 게이트 제어 핀 (외부 풀업, active low)
-	pinMode(pinFET1, OUTPUT);	// FET 제어 핀 1 (외부 풀다운)
-	pinMode(pinFET05, OUTPUT);	// FET 제어 핀 2 (외부 풀다운)
-	pinMode(pinLED, OUTPUT);	// 상태 LED
-	digitalWrite(pinLED, LOW);	// LED 초기 상태 (꺼짐)
+	pinMode(g_K00_PIN_INA226_ALERT, INPUT);	// INA226의 알림 핀 (외부 풀업, active low)
+	pinMode(g_K00_PIN_GATE, INPUT);	// 측정 게이트 제어 핀 (외부 풀업, active low)
+	pinMode(g_K00_PIN_FET_1Ohm, OUTPUT);	// FET 제어 핀 1 (외부 풀다운)
+	pinMode(g_K00_PIN_FET_05hm, OUTPUT);	// FET 제어 핀 2 (외부 풀다운)
+	pinMode(g_K00_PIN_LED, OUTPUT);	// 상태 LED
+	digitalWrite(g_K00_PIN_LED, LOW);	// LED 초기 상태 (꺼짐)
 
 	// 직렬 포트 초기화
 	Serial.begin(115200);
-	ESP_LOGI(G_K10_TAG, "ESP32_INA226 v%s compiled on %s at %s\n\n", FwRevision, __DATE__, __TIME__);
+	ESP_LOGI(G_K10_TAG, "ESP32_INA226 v%s compiled on %s at %s\n\n", G_K10_Firmware_Rev, __DATE__, __TIME__);
 	ESP_LOGI(G_K10_TAG, "Max task priority = %d", configMAX_PRIORITIES - 1);
 	ESP_LOGI(G_K10_TAG, "arduino loopTask : setup() running on core %d with priority %d", xPortGetCoreID(), uxTaskPriorityGet(NULL));
 
@@ -77,14 +87,14 @@ void K10_init() {
 	nv_options_load(Options);
 
 	// 기본 측정 모드 설정 (전류/전압 측정)
-	Measure.mode = MODE_CURRENT_VOLTAGE;
+	Measure.mode = G_K00_MEASURE_MODE_CURRENT_VOLTAGE;
 
 	// Wi-Fi 태스크 생성 (코어 0에서 실행)
-	xTaskCreatePinnedToCore(&K10_wifi_task, "wifi_task", 4096, NULL, WIFI_TASK_PRIORITY, NULL, CORE_0);
+	xTaskCreatePinnedToCore(&K10_wifi_task, "wifi_task", 4096, NULL, G_K10_WIFI_TASK_PRIORITY, NULL, g_K10_CPU_CORE_0);
 	// 주파수 측정 태스크 생성 (코어 1에서 실행)
-	xTaskCreatePinnedToCore(&K20_task_freq_counter, "freq_task", 4096, NULL, FREQUENCY_TASK_PRIORITY, NULL, CORE_1);
+	xTaskCreatePinnedToCore(&K20_task_freq_counter, "freq_task", 4096, NULL, G_K10_FREQUENCY_TASK_PRIORITY, NULL, g_K10_CPU_CORE_1);
 	// 전류/전압 측정 태스크 생성 (코어 1에서 실행)
-	xTaskCreatePinnedToCore(&K10_current_voltage_task, "cv_task", 4096, NULL, CURRENT_VOLTAGE_TASK_PRIORITY, NULL, CORE_1);
+	xTaskCreatePinnedToCore(&K10_current_voltage_task, "cv_task", 4096, NULL, G_K10_CURRENT_VOLTAGE_TASK_PRIORITY, NULL, g_K10_CPU_CORE_1);
 
 	// Arduino 기본 loopTask 삭제 (사용하지 않으므로 제거)
 	vTaskDelete(NULL);
@@ -129,7 +139,9 @@ static void K10_wifi_task(void* pVParameter) {
 	// Wi-Fi 및 웹소켓 초기화 (웹 서버 및 웹소켓 서버 시작)
 	wifi_init();
 
-	int				  state		   = ST_IDLE;  // 상태 초기화 (대기 상태)
+	K10_SYSTEM_STATE_TYPE g_K10_System_State		   = K10_ST_IDLE;  	// 상태 초기화 (대기 상태)
+	//int				  g_K10_System_State		   = ST_IDLE;  		// 상태 초기화 (대기 상태)
+
 	int				  bufferOffset = 0;		   // 데이터 버퍼 오프셋 초기화
 	int				  numBytes;				   // 전송할 데이터의 바이트 수
 	volatile int16_t* pb;
@@ -148,18 +160,18 @@ static void K10_wifi_task(void* pVParameter) {
 					break;
 
 				// 전류/전압 측정 모드 처리
-				case MODE_CURRENT_VOLTAGE:
-					switch (state) {
+				case G_K00_MEASURE_MODE_CURRENT_VOLTAGE:
+					switch (g_K10_System_State) {
 						default:
 							break;
 
-						case ST_IDLE:					   // 대기 상태
+						case K10_ST_IDLE:					   // 대기 상태
 							if (MeterReadyFlag == true) {  // 전류/전압 측정 완료 시
 								MeterReadyFlag	  = false;
 								LastPacketAckFlag = false;
 								numBytes		  = 5 * sizeof(int16_t);		  // 전송할 데이터 크기 (5개의 int16_t 데이터)
 								ws.binary(ClientID, (uint8_t*)Buffer, numBytes);  // 웹소켓을 통해 클라이언트로 데이터 전송
-								state = ST_METER_COMPLETE;						  // 측정 완료 상태로 전환
+								g_K10_System_State = K10_ST_METER_COMPLETE;						  // 측정 완료 상태로 전환
 							} else if (GateOpenFlag) {							  // 게이트가 열렸을 때
 								GateOpenFlag = false;
 								ESP_LOGD(G_K10_TAG, "Socket msg : Capture Gate Open");
@@ -174,14 +186,14 @@ static void K10_wifi_task(void* pVParameter) {
 								bufferOffset += numBytes / 2;					   // 버퍼 오프셋 업데이트 (샘플 단위)
 								if (EndCaptureFlag == true) {					   // 캡처가 종료되면
 									EndCaptureFlag = false;
-									state		   = ST_TX_COMPLETE;  // 전송 완료 상태로 전환
+									g_K10_System_State		   = K10_ST_TX_COMPLETE;  // 전송 완료 상태로 전환
 								} else {
-									state = ST_TX;	// 계속 전송 상태 유지
+									g_K10_System_State = K10_ST_TX;	// 계속 전송 상태 유지
 								}
 							}
 							break;
 
-						case ST_TX:														   // 데이터 전송 중 상태
+						case K10_ST_TX:														   // 데이터 전송 중 상태
 							if ((DataReadyFlag == true) && (LastPacketAckFlag == true)) {  // 데이터 준비 완료 및 마지막 패킷 ACK 수신
 								LastPacketAckFlag = false;
 								DataReadyFlag	  = false;
@@ -194,12 +206,12 @@ static void K10_wifi_task(void* pVParameter) {
 								bufferOffset += numBytes / 2;								// 버퍼 오프셋 갱신
 								if (EndCaptureFlag == true) {								// 캡처 종료 플래그 확인
 									EndCaptureFlag = false;
-									state		   = ST_TX_COMPLETE;  // 전송 완료 상태로 전환
+									g_K10_System_State		   = K10_ST_TX_COMPLETE;  // 전송 완료 상태로 전환
 								}
 							}
 							break;
 
-						case ST_TX_COMPLETE:				  // 전송 완료 상태
+						case K10_ST_TX_COMPLETE:				  // 전송 완료 상태
 							if (LastPacketAckFlag == true) {  // 마지막 패킷에 대한 ACK 수신
 								t2 = micros();
 								ESP_LOGD(G_K10_TAG, "Socket msg : %dus, Tx ...", t2 - t1);
@@ -207,28 +219,28 @@ static void K10_wifi_task(void* pVParameter) {
 								msg = MSG_TX_COMPLETE;					 // 전송 완료 메시지
 								ws.binary(ClientID, (uint8_t*)&msg, 2);	 // 클라이언트로 전송 완료 메시지 전송
 								K10_reset_flags();							 // 플래그 초기화
-								state		 = ST_IDLE;					 // 대기 상태로 전환
+								g_K10_System_State		 = K10_ST_IDLE;					 // 대기 상태로 전환
 								TxSamples	 = 0;						 // 전송할 샘플 수 초기화
 								bufferOffset = 0;						 // 버퍼 오프셋 초기화
 							}
 							break;
 
-						case ST_METER_COMPLETE:				  // 전류/전압 측정 완료 상태
+						case K10_ST_METER_COMPLETE:				  // 전류/전압 측정 완료 상태
 							if (LastPacketAckFlag == true) {  // 마지막 패킷에 대한 ACK 수신
 								K10_reset_flags();				  // 플래그 초기화
-								state = ST_IDLE;			  // 대기 상태로 전환
+								g_K10_System_State = K10_ST_IDLE;			  // 대기 상태로 전환
 							}
 							break;
 					}
 					break;
 
 				// 주파수 측정 모드 처리
-				case MODE_FREQUENCY:
-					switch (state) {
+				case G_K00_MEASURE_MODE_FREQUENCY:
+					switch (g_K10_System_State) {
 						default:
 							break;
 
-						case ST_IDLE:					  // 대기 상태
+						case K10_ST_IDLE:					  // 대기 상태
 							if (FreqReadyFlag == true) {  // 주파수 측정이 완료된 경우
 								FreqReadyFlag	  = false;
 								LastPacketAckFlag = false;
@@ -237,14 +249,14 @@ static void K10_wifi_task(void* pVParameter) {
 								buffer[1] = FrequencyHz;	   // 측정된 주파수 값
 								numBytes  = 2 * sizeof(int32_t);
 								ws.binary(ClientID, (uint8_t*)buffer, numBytes);  // 클라이언트로 주파수 데이터 전송
-								state = ST_FREQ_COMPLETE;						  // 주파수 전송 완료 상태로 전환
+								g_K10_System_State = K10_ST_FREQ_COMPLETE;						  // 주파수 전송 완료 상태로 전환
 							}
 							break;
 
-						case ST_FREQ_COMPLETE:				  // 주파수 전송 완료 상태
+						case K10_ST_FREQ_COMPLETE:				  // 주파수 전송 완료 상태
 							if (LastPacketAckFlag == true) {  // 마지막 패킷에 대한 ACK 수신
 								K10_reset_flags();				  // 플래그 초기화
-								state = ST_IDLE;			  // 대기 상태로 전환
+								g_K10_System_State = K10_ST_IDLE;			  // 대기 상태로 전환
 							}
 							break;
 					}
@@ -253,8 +265,8 @@ static void K10_wifi_task(void* pVParameter) {
 		} else {
 			// 소켓 연결 해제 시, 상태 및 플래그 초기화
 			K10_reset_flags();
-			Measure.mode = MODE_INVALID;  // 측정 모드를 무효로 설정
-			state		 = ST_IDLE;		  // 대기 상태로 전환
+			Measure.mode = G_K00_MEASURE_MODE_INVALID;  // 측정 모드를 무효로 설정
+			g_K10_System_State		 = K10_ST_IDLE;		  // 대기 상태로 전환
 		}
 	}
 	vTaskDelete(NULL);	// 태스크 종료
@@ -270,7 +282,7 @@ static void K10_current_voltage_task(void* pvParameter) {
 	CVCaptureFlag = false;
 
 	// I2C 초기화 (SDA, SCL 핀 설정 및 400kHz로 통신 설정)
-	Wire.begin(pinSDA, pinSCL);
+	Wire.begin(g_K00_PIN_INA226_SDA, g_K00_PIN_INA226_SCL);
 	Wire.setClock(400000);
 
 	// INA226 센서 ID 확인

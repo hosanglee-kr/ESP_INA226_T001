@@ -57,37 +57,37 @@
  */
 
 #ifndef INA226_H_
-	#define INA226_H_
+#define INA226_H_
 
-	#include <Arduino.h>
-	#include <Wire.h>
+#include <Arduino.h>
+#include <Wire.h>
 
-	// INA226 I2C 주소 정의
-	// 이 값은 데이터 시트에서 제공하는 INA226의 기본 7비트 주소입니다.
-	#define INA226_I2C_ADDR 0x40
+// INA226 I2C 주소 정의
+// 이 값은 데이터 시트에서 제공하는 INA226의 기본 7비트 주소입니다.
+#define 	G_K40_INA226_I2C_ADDR 	0x40
 
-	// INA226 레지스터 주소 정의
-	// 각각의 레지스터는 INA226에서 데이터를 읽거나 쓰기 위해 사용됩니다.
-	#define REG_CFG			0x00  // 설정 레지스터, 장치 설정을 위한 레지스터
-	#define REG_SHUNT		0x01  // 션트 전압 레지스터, 션트 저항에서 측정된 전압을 저장
-	#define REG_VBUS		0x02  // 버스 전압 레지스터, 전원 공급선에서 측정된 전압을 저장
-	#define REG_MASK		0x06  // 마스크/활성 레지스터, 경고 및 알림 제어
-	#define REG_ALERT		0x07  // 경고 한계 레지스터, 경고 임계값을 설정
-	#define REG_ID			0xFE  // 제조사 ID 레지스터
+// INA226 레지스터 주소 정의
+// 각각의 레지스터는 INA226에서 데이터를 읽거나 쓰기 위해 사용됩니다.
+#define 	REG_CFG				0x00  		// 설정 레지스터, 장치 설정을 위한 레지스터
+#define 	REG_SHUNT			0x01  		// 션트 전압 레지스터, 션트 저항에서 측정된 전압을 저장
+#define 	REG_VBUS			0x02  		// 버스 전압 레지스터, 전원 공급선에서 측정된 전압을 저장
+#define 	REG_MASK			0x06  		// 마스크/활성 레지스터, 경고 및 알림 제어
+#define 	REG_ALERT			0x07  		// 경고 한계 레지스터, 경고 임계값을 설정
+#define 	REG_ID				0xFE  		// 제조사 ID 레지스터
 
-	// 전류 측정 스케일 정의
-	// 이 값들은 측정하려는 전류의 범위에 따라 션트 저항을 변경하기 위한 값입니다.
-	#define SCALE_HI		0  // 고스케일: 션트 저항 = 0.05옴, 최대 전류 = 1.64A
-	#define SCALE_LO		1  // 저스케일: 션트 저항 = 1.05옴, 최대 전류 = 78mA
-	#define SCALE_AUTO		2  // 자동 모드: 측정에 따라 스케일을 자동으로 전환
+// 전류 측정 스케일 정의
+// 이 값들은 측정하려는 전류의 범위에 따라 션트 저항을 변경하기 위한 값입니다.
+#define SCALE_HI		0  // 고스케일: 션트 저항 = 0.05옴, 최대 전류 = 1.64A
+#define SCALE_LO		1  // 저스케일: 션트 저항 = 1.05옴, 최대 전류 = 78mA
+#define SCALE_AUTO		2  // 자동 모드: 측정에 따라 스케일을 자동으로 전환
 
-	// 메시지 ID 정의
-	// 각 메시지는 특정 상태나 명령을 전달하기 위한 코드로 사용됩니다.
-	#define MSG_GATE_OPEN	1234  // 게이트가 열렸을 때 보내는 메시지
-	#define MSG_TX_START	1111  // 전송 시작 메시지
-	#define MSG_TX			2222  // 데이터 전송 중 메시지
-	#define MSG_TX_COMPLETE 3333  // 데이터 전송 완료 메시지
-	#define MSG_TX_CV_METER 4444  // CV 미터 데이터 전송 메시지
+// 메시지 ID 정의
+// 각 메시지는 특정 상태나 명령을 전달하기 위한 코드로 사용됩니다.
+#define MSG_GATE_OPEN		1234  // 게이트가 열렸을 때 보내는 메시지
+#define MSG_TX_START		1111  // 전송 시작 메시지
+#define MSG_TX				2222  // 데이터 전송 중 메시지
+#define MSG_TX_COMPLETE 	3333  // 데이터 전송 완료 메시지
+#define MSG_TX_CV_METER 	4444  // CV 미터 데이터 전송 메시지
 
 // CONFIG_t 구조체 정의
 // 이 구조체는 측정을 위한 설정 값을 저장하는데 사용됩니다.
@@ -123,7 +123,7 @@ void	 ina226_test_capture();																					   // 테스트 캡처 함수
 
 // 로그 태그 정의
 // ESP32 및 기타 플랫폼에서 로그 출력을 위한 태그를 설정합니다.
-#define 		G_K40_TAG	"ina226"
+#define 		G_K40_TAG	"K40_ina226"
 //static const char* G_K40_TAG = "ina226";
 
 // 전역 플래그 변수 초기화
@@ -152,14 +152,14 @@ const CONFIG_t Config[NUM_CFG] = {
 static void switch_scale(int scale) {
 	// SCALE_HI인 경우 FET1을 LOW로 설정하고 FET05를 HIGH로 설정합니다.
 	// SCALE_LO인 경우 반대로 설정됩니다.
-	digitalWrite(pinFET1, scale == SCALE_HI ? LOW : HIGH);
-	digitalWrite(pinFET05, scale == SCALE_HI ? HIGH : LOW);
+	digitalWrite(g_K00_PIN_FET_1Ohm, scale == SCALE_HI ? LOW : HIGH);
+	digitalWrite(g_K00_PIN_FET_05hm, scale == SCALE_HI ? HIGH : LOW);
 }
 
 // INA226 레지스터 쓰기 함수
 // 지정된 레지스터 주소에 16비트 데이터를 쓰는 함수입니다.
 void ina226_write_reg(uint8_t regAddr, uint16_t data) {
-	Wire.beginTransmission(INA226_I2C_ADDR);
+	Wire.beginTransmission(G_K40_INA226_I2C_ADDR);
 	Wire.write(regAddr);						  // 레지스터 주소 전송
 	Wire.write((uint8_t)((data >> 8) & 0x00FF));  // 상위 바이트 전송
 	Wire.write((uint8_t)(data & 0x00FF));		  // 하위 바이트 전송
@@ -169,10 +169,10 @@ void ina226_write_reg(uint8_t regAddr, uint16_t data) {
 // INA226 레지스터 읽기 함수
 // 지정된 레지스터 주소에서 16비트 데이터를 읽어 반환하는 함수입니다.
 uint16_t ina226_read_reg(uint8_t regAddr) {
-	Wire.beginTransmission(INA226_I2C_ADDR);
+	Wire.beginTransmission(G_K40_INA226_I2C_ADDR);
 	Wire.write(regAddr);				   // 읽고자 하는 레지스터 주소 전송
 	Wire.endTransmission(false);		   // I2C 통신 재시작
-	Wire.requestFrom(INA226_I2C_ADDR, 2);  // 2바이트 요청
+	Wire.requestFrom(G_K40_INA226_I2C_ADDR, 2);  // 2바이트 요청
 	uint8_t buf[2];
 	buf[0] = Wire.read();  // 상위 바이트 읽기
 	buf[1] = Wire.read();  // 하위 바이트 읽기
@@ -209,14 +209,14 @@ bool ina226_capture_oneshot(volatile MEASURE_t& measure, volatile int16_t* buffe
 	ina226_write_reg(REG_CFG, measure.m.cv_meas.cfg | 0x0003);	// 원샷 변환 시작 (션트 및 버스)
 
 	// 첫 번째 샘플 무시
-	while (digitalRead(pinAlert) == HIGH);	 // 알림 핀이 LOW가 될 때까지 대기
+	while (digitalRead(g_K00_PIN_INA226_ALERT) == HIGH);	 // 알림 핀이 LOW가 될 때까지 대기
 	reg_shunt = ina226_read_reg(REG_SHUNT);	 // 션트 전압 읽기
 	reg_bus	  = ina226_read_reg(REG_VBUS);	 // 버스 전압 읽기
 
 	// 두 번째 샘플을 측정
 	uint32_t tstart = micros();									// 측정 시작 시간 기록
 	ina226_write_reg(REG_CFG, measure.m.cv_meas.cfg | 0x0003);	// 변환 시작
-	while (digitalRead(pinAlert) == HIGH);						// 알림 핀이 LOW가 될 때까지 대기
+	while (digitalRead(g_K00_PIN_INA226_ALERT) == HIGH);						// 알림 핀이 LOW가 될 때까지 대기
 	uint32_t tend = micros();									// 측정 완료 시간 기록
 
 	// 샘플을 읽고 버퍼에 저장
@@ -273,7 +273,7 @@ bool ina226_capture_averaged_sample(volatile MEASURE_t& measure, volatile int16_
 	ina226_write_reg(REG_CFG, measure.m.cv_meas.cfg | 0x0007);
 
 	// 첫 번째 샘플 무시
-	while (digitalRead(pinAlert) == HIGH);	 // 알림 핀이 LOW가 될 때까지 대기
+	while (digitalRead(g_K00_PIN_INA226_ALERT) == HIGH);	 // 알림 핀이 LOW가 될 때까지 대기
 	reg_shunt = ina226_read_reg(REG_SHUNT);	 // 션트 전압 읽기
 	reg_bus	  = ina226_read_reg(REG_VBUS);	 // 버스 전압 읽기
 
@@ -287,7 +287,7 @@ bool ina226_capture_averaged_sample(volatile MEASURE_t& measure, volatile int16_
 	// 주어진 주기 동안 샘플을 수집
 	while (inx < numSamples) {
 		uint32_t t1 = micros();
-		while (digitalRead(pinAlert) == HIGH);	 // 알림 핀이 LOW가 될 때까지 대기
+		while (digitalRead(g_K00_PIN_INA226_ALERT) == HIGH);	 // 알림 핀이 LOW가 될 때까지 대기
 		reg_shunt = ina226_read_reg(REG_SHUNT);	 // 션트 전압 읽기
 		reg_bus	  = ina226_read_reg(REG_VBUS);	 // 버스 전압 읽기
 
@@ -349,7 +349,7 @@ void ina226_capture_buffer_triggered(volatile MEASURE_t& measure, volatile int16
 	ina226_write_reg(REG_CFG, measure.m.cv_meas.cfg | 0x0007);
 
 	// 첫 번째 샘플 무시
-	while (digitalRead(pinAlert) == HIGH);	 // 알림 핀이 LOW가 될 때까지 대기
+	while (digitalRead(g_K00_PIN_INA226_ALERT) == HIGH);	 // 알림 핀이 LOW가 될 때까지 대기
 	reg_shunt = ina226_read_reg(REG_SHUNT);	 // 션트 전압 읽기
 	reg_bus	  = ina226_read_reg(REG_VBUS);	 // 버스 전압 읽기
 
@@ -366,7 +366,7 @@ void ina226_capture_buffer_triggered(volatile MEASURE_t& measure, volatile int16
 	while (inx < measure.m.cv_meas.nSamples) {
 		uint32_t t1		  = micros();
 		int		 bufIndex = offset + 2 * inx;	// 버퍼 인덱스 계산
-		while (digitalRead(pinAlert) == HIGH);	// 알림 핀이 LOW가 될 때까지 대기
+		while (digitalRead(g_K00_PIN_INA226_ALERT) == HIGH);	// 알림 핀이 LOW가 될 때까지 대기
 		// 션트 및 버스 전압 읽기
 		reg_shunt = ina226_read_reg(REG_SHUNT);
 		reg_bus	  = ina226_read_reg(REG_VBUS);
@@ -448,7 +448,7 @@ void ina226_capture_buffer_gated(volatile MEASURE_t& measure, volatile int16_t* 
 	// 션트 및 버스 전압을 연속 변환 모드로 설정
 	ina226_write_reg(REG_CFG, measure.m.cv_meas.cfg | 0x0007);
 	// 첫 번째 샘플 무시
-	while (digitalRead(pinAlert) == HIGH);	 // 알림 핀이 LOW가 될 때까지 대기
+	while (digitalRead(g_K00_PIN_INA226_ALERT) == HIGH);	 // 알림 핀이 LOW가 될 때까지 대기
 	reg_shunt = ina226_read_reg(REG_SHUNT);	 // 션트 전압 읽기
 	reg_bus	  = ina226_read_reg(REG_VBUS);	 // 버스 전압 읽기
 
@@ -460,15 +460,15 @@ void ina226_capture_buffer_gated(volatile MEASURE_t& measure, volatile int16_t* 
 	int numSamples = 0;									   // 캡처된 샘플 수 초기화
 	EndCaptureFlag = false;								   // 캡처 종료 플래그 초기화
 	// 게이트 신호가 LOW인 경우에만 샘플링 수행
-	while (digitalRead(pinGate) == HIGH);  // 게이트 신호가 활성화될 때까지 대기
+	while (digitalRead(g_K00_PIN_GATE) == HIGH);  // 게이트 신호가 활성화될 때까지 대기
 	GateOpenFlag	= true;				   // 게이트가 열렸음을 알림
 	uint32_t tstart = micros();			   // 캡처 시작 시간 기록
 
 	// 게이트가 활성화된 동안 샘플을 수집
-	while ((digitalRead(pinGate) == LOW) && (numSamples < MaxSamples)) {
+	while ((digitalRead(g_K00_PIN_GATE) == LOW) && (numSamples < MaxSamples)) {
 		uint32_t t1		  = micros();
 		int		 bufIndex = offset + 2 * numSamples;  // 버퍼 인덱스 계산
-		while (digitalRead(pinAlert) == HIGH);		  // 알림 핀이 LOW가 될 때까지 대기
+		while (digitalRead(g_K00_PIN_INA226_ALERT) == HIGH);		  // 알림 핀이 LOW가 될 때까지 대기
 		// 션트 및 버스 전압 읽기
 		reg_shunt = ina226_read_reg(REG_SHUNT);
 		reg_bus	  = ina226_read_reg(REG_VBUS);
