@@ -99,13 +99,13 @@ typedef struct {
 	#define NUM_CFG 4  // 설정 배열의 크기 (4개의 설정이 존재함)
 
 // 외부 변수 선언
-//extern const CONFIG_t Config[];		   // 측정을 위한 설정 값 배열
-extern int			  MaxSamples;	   // 최대 샘플 수
-//extern volatile bool  GateOpenFlag;	   // 게이트가 열렸는지 여부를 나타내는 플래그
-// volatile bool  DataReadyFlag;   // 데이터가 준비되었는지 여부를 나타내는 플래그
-extern volatile int	  TxSamples;	   // 전송할 샘플의 수
-//extern volatile bool  EndCaptureFlag;  // 캡처가 종료되었는지 여부를 나타내는 플래그
-//extern volatile bool  MeterReadyFlag;  // 미터가 준비되었는지 여부를 나타내는 플래그
+//extern const CONFIG_t Config[];		   	// 측정을 위한 설정 값 배열
+extern int			  MaxSamples;	   		// 최대 샘플 수
+//extern volatile bool  GateOpenFlag;	   	// 게이트가 열렸는지 여부를 나타내는 플래그
+// volatile bool  DataReadyFlag;   			// 데이터가 준비되었는지 여부를 나타내는 플래그
+extern volatile int	  TxSamples;	   		// 전송할 샘플의 수
+//extern volatile bool  EndCaptureFlag;  	// 캡처가 종료되었는지 여부를 나타내는 플래그
+//extern volatile bool  MeterReadyFlag;  	// 미터가 준비되었는지 여부를 나타내는 플래그
 
 // 함수 선언
 void	 ina226_write_reg(uint8_t regAddr, uint16_t data);														   // 레지스터에 값을 쓰는 함수
@@ -126,13 +126,14 @@ void	 ina226_test_capture();																					   // 테스트 캡처 함수
 #define 		G_K40_TAG	"K40_ina226"
 //static const char* G_K40_TAG = "ina226";
 
-// 전역 플래그 변수 초기화
-volatile bool DataReadyFlag	 = false;  // 데이터 준비 완료 플래그
-volatile bool MeterReadyFlag = false;  // 미터 준비 완료 플래그
-volatile bool GateOpenFlag	 = false;  // 게이트 열림 플래그
 
-extern volatile bool CVCaptureFlag;				 // CV 캡처 플래그
-volatile bool		 EndCaptureFlag	   = false;	 // 캡처 종료 플래그
+// 전역 플래그 변수 초기화
+volatile bool 			DataReadyFlag	= false;  // 데이터 준비 완료 플래그
+volatile bool 			MeterReadyFlag	= false;  // 미터 준비 완료 플래그
+volatile bool 			GateOpenFlag	= false;  // 게이트 열림 플래그
+
+extern volatile bool 	CVCaptureFlag;				 // CV 캡처 플래그
+volatile bool		 	EndCaptureFlag	= false;	 // 캡처 종료 플래그
 //extern volatile bool		 LastPacketAckFlag = false;	 // 마지막 패킷 확인 플래그
 
 // Config 배열 초기화
@@ -529,7 +530,7 @@ void ina226_capture_buffer_gated(volatile MEASURE_t& measure, volatile int16_t* 
 	measure.m.cv_meas.vmin = bmin * 0.00125f;
 
 	// 최종 로그 출력
-	ESP_LOGI(G_K40_TAG, "CV Buffer Gated : %.3fsecs 0x%04X %s %.1fHz %.1fV %.3fmA\n",
+	ESP_LOGI(G_K40_TAG, "CV g_K10_Buffer Gated : %.3fsecs 0x%04X %s %.1fHz %.1fV %.3fmA\n",
 			 (float)us / 1000000.0f, measure.m.cv_meas.cfg, measure.m.cv_meas.scale == SCALE_LO ? "LO" : "HI",
 			 measure.m.cv_meas.sampleRate, measure.m.cv_meas.vavg, measure.m.cv_meas.iavgma);
 }
@@ -538,10 +539,10 @@ void ina226_capture_buffer_gated(volatile MEASURE_t& measure, volatile int16_t* 
 // 각 설정에 대해 원샷 샘플을 캡처하고 성능을 테스트합니다.
 void ina226_test_capture() {
 	ESP_LOGI(G_K40_TAG, "Measuring one-shot sample times");	 // 테스트 시작 로그
-	Measure.m.cv_meas.scale = SCALE_HI;						 // 고스케일로 설정
+	g_K10_Measure.m.cv_meas.scale = SCALE_HI;						 // 고스케일로 설정
 	for (int inx = 0; inx < NUM_CFG; inx++) {
-		Measure.m.cv_meas.cfg = Config[inx].reg;		// 각 설정에 대해 원샷 캡처 수행
-		ina226_capture_oneshot(Measure, Buffer, true);	// 원샷 캡처 함수 호출
+		g_K10_Measure.m.cv_meas.cfg = Config[inx].reg;		// 각 설정에 대해 원샷 캡처 수행
+		ina226_capture_oneshot(g_K10_Measure, g_K10_Buffer, true);	// 원샷 캡처 함수 호출
 	}
 }
 

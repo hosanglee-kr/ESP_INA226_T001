@@ -396,15 +396,15 @@ void socket_handle_message(void *arg, uint8_t *data, size_t len) {
 			LastPacketAckFlag = true;
 		} else if (data[0] == 'm') {
 			// 'm' 명령어: 전류 및 전압 측정 모드 설정
-			Measure.mode			   = G_K00_MEASURE_MODE_CURRENT_VOLTAGE;
-			Measure.m.cv_meas.nSamples = 1;						// 샘플 수 설정
-			Measure.m.cv_meas.cfg	   = Config[1].reg;			// 측정 설정
-			Measure.m.cv_meas.periodUs = Config[1].periodUs;	// 측정 주기 설정
-			Measure.m.cv_meas.scale	   = (int)(data[1] - '0');	// 스케일 설정
+			g_K10_Measure.mode			   = G_K00_MEASURE_MODE_CURRENT_VOLTAGE;
+			g_K10_Measure.m.cv_meas.nSamples = 1;						// 샘플 수 설정
+			g_K10_Measure.m.cv_meas.cfg	   = Config[1].reg;			// 측정 설정
+			g_K10_Measure.m.cv_meas.periodUs = Config[1].periodUs;	// 측정 주기 설정
+			g_K10_Measure.m.cv_meas.scale	   = (int)(data[1] - '0');	// 스케일 설정
 			CVCaptureFlag			   = true;					// 전류/전압 캡처 플래그 설정
 		} else if (data[0] == 'f') {
 			// 'f' 명령어: 주파수 측정 모드 설정
-			Measure.mode	= G_K00_MEASURE_MODE_FREQUENCY;
+			g_K10_Measure.mode	= G_K00_MEASURE_MODE_FREQUENCY;
 			FreqCaptureFlag = true;	 // 주파수 캡처 플래그 설정
 		} else {
 			// JSON 형식의 메시지 처리 (고급 명령어)
@@ -432,14 +432,14 @@ void socket_handle_message(void *arg, uint8_t *data, size_t len) {
 				int scale		   = strtol(szScale, NULL, 10);			   // 스케일 변환
 
 				// 측정 모드 및 설정 적용
-				Measure.mode			   = G_K00_MEASURE_MODE_CURRENT_VOLTAGE;
-				Measure.m.cv_meas.cfg	   = Config[cfgIndex].reg;
-				Measure.m.cv_meas.scale	   = scale;
-				Measure.m.cv_meas.nSamples = numSamples;
-				Measure.m.cv_meas.periodUs = Config[cfgIndex].periodUs;
+				g_K10_Measure.mode			   = G_K00_MEASURE_MODE_CURRENT_VOLTAGE;
+				g_K10_Measure.m.cv_meas.cfg	   = Config[cfgIndex].reg;
+				g_K10_Measure.m.cv_meas.scale	   = scale;
+				g_K10_Measure.m.cv_meas.nSamples = numSamples;
+				g_K10_Measure.m.cv_meas.periodUs = Config[cfgIndex].periodUs;
 
 				// 로그 출력
-				ESP_LOGI(G_K30_TAG, "Mode = %d", Measure.mode);
+				ESP_LOGI(G_K30_TAG, "Mode = %d", g_K10_Measure.mode);
 				ESP_LOGI(G_K30_TAG, "cfgIndex = %d", cfgIndex);
 				ESP_LOGI(G_K30_TAG, "scale = %d", scale);
 				ESP_LOGI(G_K30_TAG, "nSamples = %d", numSamples);
@@ -449,7 +449,7 @@ void socket_handle_message(void *arg, uint8_t *data, size_t len) {
 			}
 			// 'oscfreq' 명령어: 주파수 측정 설정
 			else if (strcmp(szAction, "oscfreq") == 0) {
-				Measure.mode			= G_K00_MEASURE_MODE_FREQUENCY;
+				g_K10_Measure.mode			= G_K00_MEASURE_MODE_FREQUENCY;
 				const char *szOscFreqHz = json["freqhz"];
 
 				ESP_LOGI(G_K30_TAG, "json[\"action\"]= %s\n", szAction);	 // 액션 로그 출력

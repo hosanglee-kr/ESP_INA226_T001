@@ -64,7 +64,7 @@ typedef struct {
 } MEASURE_t;
 
 // 전역 변수 선언
-extern volatile MEASURE_t Measure;	// 측정 결과와 설정을 담은 전역 구조체
-extern volatile int16_t*  Buffer;	// 측정 데이터 버퍼 (정수형 배열)
+extern volatile MEASURE_t g_K10_Measure;	// 측정 결과와 설정을 담은 전역 구조체
+extern volatile int16_t*  g_K10_Buffer;	// 측정 데이터 버퍼 (정수형 배열)
 
 #endif
