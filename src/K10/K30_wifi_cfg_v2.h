@@ -106,7 +106,8 @@ static IPAddress SecondaryDNS(8, 8, 4, 4);	   // 보조 DNS 서버
 const char *szAPSSID = "ESP32_METER";  // 비밀번호 없는 Access Point 모드의 SSID
 
 // 함수 선언
-void		  wifi_init();
+void		  K10_wifi_init();
+void              K10_AsyncWebSrv_init();
 void		  socket_event_handler(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType type, void *arg, uint8_t *data, size_t len);
 void		  socket_handle_message(void *arg, uint8_t *data, size_t len);
 static void	  wifi_start_as_ap();
@@ -298,7 +299,7 @@ static void wifi_start_as_station() {
  * 또한 mDNS 서비스를 시작하여 "http://meter.local" 도메인으로 접속할 수 있도록 설정합니다.
  * 웹서버와 웹소켓 서버도 이 함수에서 초기화됩니다.
  */
-void wifi_init() {
+void K10_wifi_init() {
 	delay(100);	 // 초기화 딜레이
 
 	// 저장된 SSID가 없으면 AP 모드로 시작
@@ -313,6 +314,10 @@ void wifi_init() {
 		ESP_LOGI(G_K30_TAG, "Error starting mDNS service");	 // mDNS 시작 실패 로그
 	}
 
+	
+}
+
+void K10_AsyncWebSrv_init(){
 	pServer = new AsyncWebServer(80);  // HTTP 서버 생성 (포트 80)
 	if (pServer == nullptr) {
 		ESP_LOGE(G_K30_TAG, "Error creating AsyncWebServer!");	// 서버 생성 실패 시 로그 출력
@@ -343,7 +348,7 @@ void wifi_init() {
 	pServer->serveStatic("/", LittleFS, "/");
 
 	pServer->begin();					 // 웹 서버 시작
-	MDNS.addService("http", "tcp", 80);	 // mDNS 서비스에 HTTP 추가
+	MDNS.addService("http", "tcp", 80);  // mDNS 서비스에 HTTP 추가
 }
 
 /*
