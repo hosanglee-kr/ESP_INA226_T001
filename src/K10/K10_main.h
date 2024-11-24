@@ -19,7 +19,10 @@
 
 #include "K00_config_v2.h"
 #include "K20_freq_counter_v2.h"
+
 #include "K30_wifi_cfg_v2.h"
+#include "K35_WebSrv_v3.h"
+
 #include "K40_ina226_v2.h"
 #include "K50_nv_data_v2.h"
 
@@ -28,18 +31,19 @@ const char*		   		G_K10_Firmware_Rev = "0.97";
 static const char* 		G_K10_TAG  = "K10_main";
 
 // 전역 변수 선언
-volatile int		 	TxSamples;			   // 웹소켓으로 전송할 샘플 수
-extern volatile bool 	SocketConnectedFlag;  // 웹소켓 연결 상태 플래그
-extern uint32_t		 	ClientID;			   // 연결된 웹소켓 클라이언트 ID
+volatile int		 	TxSamples;			   			// 웹소켓으로 전송할 샘플 수
+
+extern volatile bool 	g_K35_WebSocket_ConnectedFlag;  			// 웹소켓 연결 상태 플래그
+extern uint32_t		 	g_K35_WS_ClientID;			   	// 연결된 웹소켓 클라이언트 ID
 
 // 태스크 우선순위 설정
 #define 				G_K10_WIFI_TASK_PRIORITY			  	1
 #define 				G_K10_CURRENT_VOLTAGE_TASK_PRIORITY 	(configMAX_PRIORITIES - 1)	// 24
 #define 				G_K10_FREQUENCY_TASK_PRIORITY		  	(configMAX_PRIORITIES - 2)	// 23
 
-volatile MEASURE_t 		g_K10_Measure;		   // 측정 데이터를 저장하는 구조체
-volatile int16_t*  		g_K10_Buffer = NULL;  // 측정 데이터를 저장할 버퍼
-int				   		MaxSamples;	   // 측정할 수 있는 최대 샘플 수
+extern volatile MEASURE_t 		g_K10_Measure;		   // 측정 데이터를 저장하는 구조체
+extern volatile int16_t*  		g_K10_Buffer;  		// 측정 데이터를 저장할 버퍼
+extern int				   		g_K40_MaxSamples;	   // 측정할 수 있는 최대 샘플 수
 
 
 enum K10_SYSTEM_STATE_TYPE {
@@ -137,7 +141,9 @@ static void K10_wifi_task(void* pVParameter) {
 	}
 
 	// Wi-Fi 및 웹소켓 초기화 (웹 서버 및 웹소켓 서버 시작)
-	wifi_init();
+	K30_wifi_init();
+
+	K35_WebSrv_init();
 
 	K10_SYSTEM_STATE_TYPE g_K10_System_State		   = K10_ST_IDLE;  	// 상태 초기화 (대기 상태)
 	//int				  g_K10_System_State		   = ST_IDLE;  		// 상태 초기화 (대기 상태)
@@ -152,9 +158,9 @@ static void K10_wifi_task(void* pVParameter) {
 	// 메인 루프: 웹소켓 클라이언트와의 통신 처리
 	while (1) {
 		vTaskDelay(1);		  // 다른 태스크가 실행될 수 있도록 잠시 대기
-		ws.cleanupClients();  // 웹소켓 클라이언트 정리 (연결 종료된 클라이언트 정리)
+		g_K35_WebSocket.cleanupClients();  // 웹소켓 클라이언트 정리 (연결 종료된 클라이언트 정리)
 
-		if (SocketConnectedFlag == true) {	// 클라이언트가 연결된 상태일 때
+		if (g_K35_WebSocket_ConnectedFlag == true) {	// 클라이언트가 연결된 상태일 때
 			switch (g_K10_Measure.mode) {			// 현재 측정 모드에 따라 처리
 				default:
 					break;
@@ -170,19 +176,19 @@ static void K10_wifi_task(void* pVParameter) {
 								MeterReadyFlag	  = false;
 								LastPacketAckFlag = false;
 								numBytes		  = 5 * sizeof(int16_t);		  // 전송할 데이터 크기 (5개의 int16_t 데이터)
-								ws.binary(ClientID, (uint8_t*)g_K10_Buffer, numBytes);  // 웹소켓을 통해 클라이언트로 데이터 전송
+								g_K35_WebSocket.binary(g_K35_WS_ClientID, (uint8_t*)g_K10_Buffer, numBytes);  // 웹소켓을 통해 클라이언트로 데이터 전송
 								g_K10_System_State = K10_ST_METER_COMPLETE;						  // 측정 완료 상태로 전환
 							} else if (GateOpenFlag) {							  // 게이트가 열렸을 때
 								GateOpenFlag = false;
 								ESP_LOGD(G_K10_TAG, "Socket msg : Capture Gate Open");
 								msg = MSG_GATE_OPEN;					 // 게이트 열림 메시지
-								ws.binary(ClientID, (uint8_t*)&msg, 2);	 // 게이트 열림 상태를 클라이언트로 전송
+								g_K35_WebSocket.binary(g_K35_WS_ClientID, (uint8_t*)&msg, 2);	 // 게이트 열림 상태를 클라이언트로 전송
 							} else if (DataReadyFlag == true) {			 // 데이터가 준비된 경우
 								DataReadyFlag = false;
 								ESP_LOGD(G_K10_TAG, "Socket msg : Tx Start");
 								numBytes = (3 + TxSamples * 2) * sizeof(int16_t);  // 전송할 데이터 크기 계산
 								t1		 = micros();							   // 전송 시작 시간 기록
-								ws.binary(ClientID, (uint8_t*)g_K10_Buffer, numBytes);   // 데이터 전송
+								g_K35_WebSocket.binary(g_K35_WS_ClientID, (uint8_t*)g_K10_Buffer, numBytes);   // 데이터 전송
 								bufferOffset += numBytes / 2;					   // 버퍼 오프셋 업데이트 (샘플 단위)
 								if (EndCaptureFlag == true) {					   // 캡처가 종료되면
 									EndCaptureFlag = false;
@@ -202,7 +208,7 @@ static void K10_wifi_task(void* pVParameter) {
 								t1		 = t2;												// 새로운 전송 시간 갱신
 								pb		 = g_K10_Buffer + bufferOffset;							// 전송할 데이터 버퍼
 								numBytes = (1 + TxSamples * 2) * sizeof(int16_t);			// 전송할 바이트 수 계산
-								ws.binary(ClientID, (uint8_t*)pb, numBytes);				// 웹소켓으로 데이터 전송
+								g_K35_WebSocket.binary(g_K35_WS_ClientID, (uint8_t*)pb, numBytes);				// 웹소켓으로 데이터 전송
 								bufferOffset += numBytes / 2;								// 버퍼 오프셋 갱신
 								if (EndCaptureFlag == true) {								// 캡처 종료 플래그 확인
 									EndCaptureFlag = false;
@@ -217,7 +223,7 @@ static void K10_wifi_task(void* pVParameter) {
 								ESP_LOGD(G_K10_TAG, "Socket msg : %dus, Tx ...", t2 - t1);
 								ESP_LOGD(G_K10_TAG, "Socket msg : Tx Complete");
 								msg = MSG_TX_COMPLETE;					 // 전송 완료 메시지
-								ws.binary(ClientID, (uint8_t*)&msg, 2);	 // 클라이언트로 전송 완료 메시지 전송
+								g_K35_WebSocket.binary(g_K35_WS_ClientID, (uint8_t*)&msg, 2);	 // 클라이언트로 전송 완료 메시지 전송
 								K10_reset_flags();							 // 플래그 초기화
 								g_K10_System_State		 = K10_ST_IDLE;					 // 대기 상태로 전환
 								TxSamples	 = 0;						 // 전송할 샘플 수 초기화
@@ -248,7 +254,7 @@ static void K10_wifi_task(void* pVParameter) {
 								buffer[0] = MSG_TX_FREQUENCY;  // 주파수 전송 메시지
 								buffer[1] = FrequencyHz;	   // 측정된 주파수 값
 								numBytes  = 2 * sizeof(int32_t);
-								ws.binary(ClientID, (uint8_t*)buffer, numBytes);  // 클라이언트로 주파수 데이터 전송
+								g_K35_WebSocket.binary(g_K35_WS_ClientID, (uint8_t*)buffer, numBytes);  // 클라이언트로 주파수 데이터 전송
 								g_K10_System_State = K10_ST_FREQ_COMPLETE;						  // 주파수 전송 완료 상태로 전환
 							}
 							break;
@@ -286,7 +292,7 @@ static void K10_current_voltage_task(void* pvParameter) {
 	Wire.setClock(400000);
 
 	// INA226 센서 ID 확인
-	uint16_t id = ina226_read_reg(REG_ID);
+	uint16_t id = K40_INA226_read_reg(REG_ID);
 	if (id != 0x5449) {
 		ESP_LOGE(G_K10_TAG, "INA226 Manufacturer ID read = 0x%04X, expected 0x5449\n", id);
 		ESP_LOGE(G_K10_TAG, "Halting...");
@@ -295,7 +301,7 @@ static void K10_current_voltage_task(void* pvParameter) {
 		}
 	}
 
-	ina226_reset();	 // INA226 센서 리셋
+	K40_INA226_reset();	 // INA226 센서 리셋
 
 	// 최대 할당 가능한 메모리 크기 계산
 	int32_t maxBufferBytes = heap_caps_get_largest_free_block(MALLOC_CAP_8BIT);
@@ -312,8 +318,8 @@ static void K10_current_voltage_task(void* pvParameter) {
 	}
 
 	// 버퍼에 저장할 수 있는 최대 샘플 수 계산
-	MaxSamples = (maxBufferBytes - 8) / 4;
-	ESP_LOGI(G_K10_TAG, "Max Samples = %d", MaxSamples);
+	g_K40_MaxSamples = (maxBufferBytes - 8) / 4;
+	ESP_LOGI(G_K10_TAG, "Max Samples = %d", g_K40_MaxSamples);
 
 	// 측정 루프: CVCaptureFlag가 설정되면 측정 시작
 	while (1) {
@@ -321,36 +327,36 @@ static void K10_current_voltage_task(void* pvParameter) {
 			CVCaptureFlag = false;
 			if (g_K10_Measure.m.cv_meas.nSamples == 0) {	// 게이트 기반 샘플 캡처
 				ESP_LOGD(G_K10_TAG, "Capturing gated samples using cfg = 0x%04X, scale %d", g_K10_Measure.m.cv_meas.cfg, g_K10_Measure.m.cv_meas.scale);
-				ina226_capture_buffer_gated(g_K10_Measure, g_K10_Buffer);
+				K40_INA226_capture_buffer_gated(g_K10_Measure, g_K10_Buffer);
 			} else if (g_K10_Measure.m.cv_meas.nSamples == 1) {  // 단일 샘플 캡처 (저속, 고속, 자동 스케일)
 				int scalemode = g_K10_Measure.m.cv_meas.scale;
 				if (scalemode == SCALE_LO) {  // 저속 스케일로 측정
 					ESP_LOGD(G_K10_TAG, "Capturing meter sample using low scale");
 					g_K10_Measure.m.cv_meas.scale = SCALE_LO;
-					bool res				= ina226_capture_averaged_sample(g_K10_Measure, g_K10_Buffer, true);
+					bool res				= K40_INA226_capture_averaged_sample(g_K10_Measure, g_K10_Buffer, true);
 					if (!res)
 						ESP_LOGD(G_K10_TAG, "Warning : offscale reading");
 				} else if (scalemode == SCALE_HI) {	 // 고속 스케일로 측정
 					ESP_LOGD(G_K10_TAG, "Capturing meter sample using hi scale");
 					g_K10_Measure.m.cv_meas.scale = SCALE_HI;
-					bool res				= ina226_capture_averaged_sample(g_K10_Measure, g_K10_Buffer, true);
+					bool res				= K40_INA226_capture_averaged_sample(g_K10_Measure, g_K10_Buffer, true);
 					if (!res)
 						ESP_LOGD(G_K10_TAG, "Warning : offscale reading");
 				} else {  // 자동 스케일로 측정
 					ESP_LOGD(G_K10_TAG, "Capturing meter sample autorange LO");
 					g_K10_Measure.m.cv_meas.scale = SCALE_LO;
-					bool res				= ina226_capture_averaged_sample(g_K10_Measure, g_K10_Buffer, false);
+					bool res				= K40_INA226_capture_averaged_sample(g_K10_Measure, g_K10_Buffer, false);
 					if (!res) {
 						g_K10_Measure.m.cv_meas.scale = SCALE_HI;
 						ESP_LOGD(G_K10_TAG, "Capturing meter sample autorange HI");
-						res = ina226_capture_averaged_sample(g_K10_Measure, g_K10_Buffer, true);
+						res = K40_INA226_capture_averaged_sample(g_K10_Measure, g_K10_Buffer, true);
 						if (!res)
 							ESP_LOGD(G_K10_TAG, "Warning : offscale reading");
 					}
 				}
 			} else {  // 다중 샘플 캡처
 				ESP_LOGD(G_K10_TAG, "Capturing %d samples using cfg = 0x%04X, scale %d", g_K10_Measure.m.cv_meas.nSamples, g_K10_Measure.m.cv_meas.cfg, g_K10_Measure.m.cv_meas.scale);
-				ina226_capture_buffer_triggered(g_K10_Measure, g_K10_Buffer);
+				K40_INA226_capture_buffer_triggered(g_K10_Measure, g_K10_Buffer);
 			}
 		}
 		vTaskDelay(1);	// 잠시 대기 후 다시 실행

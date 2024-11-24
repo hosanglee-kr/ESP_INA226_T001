@@ -25,7 +25,7 @@ enum T_K10_MEAURE_MODE {
 // // 측정 모드 정의
 // #define MODE_CURRENT_VOLTAGE 			11	 // 전류 및 전압 측정 모드
 // #define MODE_FREQUENCY		 			22	 // 주파수 측정 모드
-// #define MODE_INVALID		 			33	 // 유효하지 않은 모드 (에러 처리용)
+// #define MODE_INVALID		 				33	 // 유효하지 않은 모드 (에러 처리용)
 
 
 // 전류 및 전압 측정을 위한 구조체 정의
@@ -63,8 +63,8 @@ typedef struct {
 	} m;
 } MEASURE_t;
 
-// 전역 변수 선언
-extern volatile MEASURE_t g_K10_Measure;	// 측정 결과와 설정을 담은 전역 구조체
-extern volatile int16_t*  g_K10_Buffer;	// 측정 데이터 버퍼 (정수형 배열)
+// // 전역 변수 선언
+volatile MEASURE_t g_K10_Measure;	// 측정 결과와 설정을 담은 전역 구조체
+volatile int16_t*  g_K10_Buffer = NULL;		// 측정 데이터 버퍼 (정수형 배열)
 
 #endif
