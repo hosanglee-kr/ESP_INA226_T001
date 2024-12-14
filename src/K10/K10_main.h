@@ -27,23 +27,35 @@
 #include "K50_nv_data_v2.h"
 
 // 펌웨어 버전 및 로그 태그 설정
-const char*		   		G_K10_Firmware_Rev = "0.97";
-static const char* 		G_K10_TAG  = "K10_main";
+const char*		G_K10_Firmware_Rev = "0.97";
+static const char* 	G_K10_TAG  = "K10_main";
 
 // 전역 변수 선언
+<<<<<<< HEAD
 volatile int		 	TxSamples;			   			// 웹소켓으로 전송할 샘플 수
 
 extern volatile bool 	g_K35_WebSocket_ConnectedFlag;  			// 웹소켓 연결 상태 플래그
 extern uint32_t		 	g_K35_WS_ClientID;			   	// 연결된 웹소켓 클라이언트 ID
+=======
+volatile int		TxSamples;			   // 웹소켓으로 전송할 샘플 수
+extern volatile bool 	SocketConnectedFlag;  // 웹소켓 연결 상태 플래그
+extern uint32_t		ClientID;			   // 연결된 웹소켓 클라이언트 ID
+>>>>>>> 6d7eb5a1d884bad4f634dd4cf7f5dafa8e929aba
 
 // 태스크 우선순위 설정
-#define 				G_K10_WIFI_TASK_PRIORITY			  	1
-#define 				G_K10_CURRENT_VOLTAGE_TASK_PRIORITY 	(configMAX_PRIORITIES - 1)	// 24
-#define 				G_K10_FREQUENCY_TASK_PRIORITY		  	(configMAX_PRIORITIES - 2)	// 23
+#define 		G_K10_WIFI_TASK_PRIORITY			  	1
+#define 		G_K10_CURRENT_VOLTAGE_TASK_PRIORITY 	(configMAX_PRIORITIES - 1)	// 24
+#define 		G_K10_FREQUENCY_TASK_PRIORITY		  	(configMAX_PRIORITIES - 2)	// 23
 
+<<<<<<< HEAD
 extern volatile MEASURE_t 		g_K10_Measure;		   // 측정 데이터를 저장하는 구조체
 extern volatile int16_t*  		g_K10_Buffer;  		// 측정 데이터를 저장할 버퍼
 extern int				   		g_K40_MaxSamples;	   // 측정할 수 있는 최대 샘플 수
+=======
+volatile MEASURE_t 	g_K10_Measure;		   // 측정 데이터를 저장하는 구조체
+volatile int16_t*  	g_K10_Buffer = NULL;  // 측정 데이터를 저장할 버퍼
+int			MaxSamples;	   // 측정할 수 있는 최대 샘플 수
+>>>>>>> 6d7eb5a1d884bad4f634dd4cf7f5dafa8e929aba
 
 
 enum K10_SYSTEM_STATE_TYPE {
@@ -124,6 +136,14 @@ void K10_reset_flags() {
 	LastPacketAckFlag = false;
 }
 
+void K10_LittleFS_init(){
+    // LittleFS 파일 시스템을 마운트 (실패 시 재부팅)
+    if (!LittleFS.begin(false)) {
+	ESP_LOGE(G_K10_TAG, "Cannot mount LittleFS, Rebooting");
+	delay(1000);
+	ESP.restart();
+    }
+}
 /*
  * Wi-Fi 태스크: 웹 서버 및 웹소켓 처리
  * - 웹 서버를 시작하고, 웹소켓을 통해 클라이언트와 실시간 데이터를 주고받음
@@ -133,30 +153,33 @@ static void K10_wifi_task(void* pVParameter) {
 	ESP_LOGD(G_K10_TAG, "wifi_task running on core %d with priority %d", xPortGetCoreID(), uxTaskPriorityGet(NULL));
 	ESP_LOGI(G_K10_TAG, "Starting web server");
 
-	// LittleFS 파일 시스템을 마운트 (실패 시 재부팅)
-	if (!LittleFS.begin(false)) {
-		ESP_LOGE(G_K10_TAG, "Cannot mount LittleFS, Rebooting");
-		delay(1000);
-		ESP.restart();
-	}
-
+	K10_LittleFS_init();
+	
 	// Wi-Fi 및 웹소켓 초기화 (웹 서버 및 웹소켓 서버 시작)
+<<<<<<< HEAD
 	K30_wifi_init();
 
 	K35_WebSrv_init();
+=======
+	K10_wifi_init();
+>>>>>>> 6d7eb5a1d884bad4f634dd4cf7f5dafa8e929aba
 
-	K10_SYSTEM_STATE_TYPE g_K10_System_State		   = K10_ST_IDLE;  	// 상태 초기화 (대기 상태)
+	K10_AsyncWebSrv_init();
+
+	K10_SYSTEM_STATE_TYPE g_K10_System_State = K10_ST_IDLE;  	// 상태 초기화 (대기 상태)
 	//int				  g_K10_System_State		   = ST_IDLE;  		// 상태 초기화 (대기 상태)
 
-	int				  bufferOffset = 0;		   // 데이터 버퍼 오프셋 초기화
-	int				  numBytes;				   // 전송할 데이터의 바이트 수
+	int		  bufferOffset = 0;	// 데이터 버퍼 오프셋 초기화
+	int		  numBytes;		// 전송할 데이터의 바이트 수
 	volatile int16_t* pb;
-	int16_t			  msg;
-	uint32_t		  t1, t2;  // 전송 시간 측정 변수
-	K10_reset_flags();			   // 상태 플래그 초기화
+	int16_t		  msg;
+	uint32_t	  t1, t2;  // 전송 시간 측정 변수
+	
+	K10_reset_flags();	   // 상태 플래그 초기화
 
 	// 메인 루프: 웹소켓 클라이언트와의 통신 처리
 	while (1) {
+<<<<<<< HEAD
 		vTaskDelay(1);		  // 다른 태스크가 실행될 수 있도록 잠시 대기
 		g_K35_WebSocket.cleanupClients();  // 웹소켓 클라이언트 정리 (연결 종료된 클라이언트 정리)
 
@@ -164,13 +187,23 @@ static void K10_wifi_task(void* pVParameter) {
 			switch (g_K10_Measure.mode) {			// 현재 측정 모드에 따라 처리
 				default:
 					break;
+=======
+	  vTaskDelay(1);		  // 다른 태스크가 실행될 수 있도록 잠시 대기
+	  ws.cleanupClients();  // 웹소켓 클라이언트 정리 (연결 종료된 클라이언트 정리)
 
-				// 전류/전압 측정 모드 처리
-				case G_K00_MEASURE_MODE_CURRENT_VOLTAGE:
-					switch (g_K10_System_State) {
-						default:
-							break;
+	  if (SocketConnectedFlag == true) {	// 클라이언트가 연결된 상태일 때
+	    switch (g_K10_Measure.mode) {			// 현재 측정 모드에 따라 처리
+	      default:
+		break;
+>>>>>>> 6d7eb5a1d884bad4f634dd4cf7f5dafa8e929aba
 
+	      // 전류/전압 측정 모드 처리
+	      case G_K00_MEASURE_MODE_CURRENT_VOLTAGE:
+		switch (g_K10_System_State) {
+		  default:
+		    break;
+
+<<<<<<< HEAD
 						case K10_ST_IDLE:					   // 대기 상태
 							if (MeterReadyFlag == true) {  // 전류/전압 측정 완료 시
 								MeterReadyFlag	  = false;
@@ -267,13 +300,111 @@ static void K10_wifi_task(void* pVParameter) {
 							break;
 					}
 					break;
+=======
+		  case K10_ST_IDLE:	// 대기 상태
+		    if (MeterReadyFlag == true) {  // 전류/전압 측정 완료 시
+			MeterReadyFlag	  = false;
+			LastPacketAckFlag = false;
+			numBytes		  = 5 * sizeof(int16_t);		  // 전송할 데이터 크기 (5개의 int16_t 데이터)
+			ws.binary(ClientID, (uint8_t*)g_K10_Buffer, numBytes);  // 웹소켓을 통해 클라이언트로 데이터 전송
+			g_K10_System_State = K10_ST_METER_COMPLETE;						  // 측정 완료 상태로 전환
+		    } else if (GateOpenFlag) {							  // 게이트가 열렸을 때
+			GateOpenFlag = false;
+			ESP_LOGD(G_K10_TAG, "Socket msg : Capture Gate Open");
+			msg = MSG_GATE_OPEN;					 // 게이트 열림 메시지
+			ws.binary(ClientID, (uint8_t*)&msg, 2);	 // 게이트 열림 상태를 클라이언트로 전송
+		    } else if (DataReadyFlag == true) {			 // 데이터가 준비된 경우
+			DataReadyFlag = false;
+			ESP_LOGD(G_K10_TAG, "Socket msg : Tx Start");
+			numBytes = (3 + TxSamples * 2) * sizeof(int16_t);  // 전송할 데이터 크기 계산
+			t1		 = micros();							   // 전송 시작 시간 기록
+			ws.binary(ClientID, (uint8_t*)g_K10_Buffer, numBytes);   // 데이터 전송
+			bufferOffset += numBytes / 2;					   // 버퍼 오프셋 업데이트 (샘플 단위)
+			if (EndCaptureFlag == true) {					   // 캡처가 종료되면
+				EndCaptureFlag = false;
+				g_K10_System_State = K10_ST_TX_COMPLETE;  // 전송 완료 상태로 전환
+			} else {
+				g_K10_System_State = K10_ST_TX;	// 계속 전송 상태 유지
+>>>>>>> 6d7eb5a1d884bad4f634dd4cf7f5dafa8e929aba
 			}
-		} else {
-			// 소켓 연결 해제 시, 상태 및 플래그 초기화
-			K10_reset_flags();
-			g_K10_Measure.mode = G_K00_MEASURE_MODE_INVALID;  // 측정 모드를 무효로 설정
-			g_K10_System_State		 = K10_ST_IDLE;		  // 대기 상태로 전환
+		    }
+		    break;
+
+		  case K10_ST_TX:														   // 데이터 전송 중 상태
+		    if ((DataReadyFlag == true) && (LastPacketAckFlag == true)) {  // 데이터 준비 완료 및 마지막 패킷 ACK 수신
+			LastPacketAckFlag = false;
+			DataReadyFlag	  = false;
+			t2		  = micros();								// 전송 완료 시간 기록
+			ESP_LOGD(G_K10_TAG, "Socket msg : %dus, Tx ...", t2 - t1);	// 전송 시간 출력
+			t1		 = t2;												// 새로운 전송 시간 갱신
+			pb		 = g_K10_Buffer + bufferOffset;							// 전송할 데이터 버퍼
+			numBytes = (1 + TxSamples * 2) * sizeof(int16_t);			// 전송할 바이트 수 계산
+			ws.binary(ClientID, (uint8_t*)pb, numBytes);				// 웹소켓으로 데이터 전송
+			bufferOffset += numBytes / 2;								// 버퍼 오프셋 갱신
+			if (EndCaptureFlag == true) {								// 캡처 종료 플래그 확인
+			    EndCaptureFlag = false;
+			    g_K10_System_State = K10_ST_TX_COMPLETE;  // 전송 완료 상태로 전환
+			}
+		     }
+		     break;
+
+		   case K10_ST_TX_COMPLETE:				  // 전송 완료 상태
+		     if (LastPacketAckFlag == true) {  // 마지막 패킷에 대한 ACK 수신
+			t2 = micros();
+			ESP_LOGD(G_K10_TAG, "Socket msg : %dus, Tx ...", t2 - t1);
+			ESP_LOGD(G_K10_TAG, "Socket msg : Tx Complete");
+			msg = MSG_TX_COMPLETE;					 // 전송 완료 메시지
+			ws.binary(ClientID, (uint8_t*)&msg, 2);	 // 클라이언트로 전송 완료 메시지 전송
+			K10_reset_flags();							 // 플래그 초기화
+			g_K10_System_State	 = K10_ST_IDLE;					 // 대기 상태로 전환
+			TxSamples	 = 0;						 // 전송할 샘플 수 초기화
+			bufferOffset = 0;						 // 버퍼 오프셋 초기화
+		     }
+		     break;
+
+		   case K10_ST_METER_COMPLETE:				  // 전류/전압 측정 완료 상태
+		     if (LastPacketAckFlag == true) {  // 마지막 패킷에 대한 ACK 수신
+			K10_reset_flags();				  // 플래그 초기화
+			g_K10_System_State = K10_ST_IDLE;			  // 대기 상태로 전환
+		     }
+		     break;
+		   }
+		   break;
+
+		// 주파수 측정 모드 처리
+		case G_K00_MEASURE_MODE_FREQUENCY:
+		  switch (g_K10_System_State) {
+		    default:
+			break;
+
+		    case K10_ST_IDLE:					  // 대기 상태
+			if (FreqReadyFlag == true) {  // 주파수 측정이 완료된 경우
+			    FreqReadyFlag	  = false;
+			    LastPacketAckFlag = false;
+			    int32_t buffer[2];
+			    buffer[0] = MSG_TX_FREQUENCY;  // 주파수 전송 메시지
+			    buffer[1] = FrequencyHz;	   // 측정된 주파수 값
+			    numBytes  = 2 * sizeof(int32_t);
+			    ws.binary(ClientID, (uint8_t*)buffer, numBytes);  // 클라이언트로 주파수 데이터 전송
+			    g_K10_System_State = K10_ST_FREQ_COMPLETE;						  // 주파수 전송 완료 상태로 전환
+			}
+			break;
+
+		    case K10_ST_FREQ_COMPLETE:				  // 주파수 전송 완료 상태
+			if (LastPacketAckFlag == true) {  // 마지막 패킷에 대한 ACK 수신
+			    K10_reset_flags();				  // 플래그 초기화
+			    g_K10_System_State = K10_ST_IDLE;			  // 대기 상태로 전환
+			}
+			break;
+		    }
+		    break;
 		}
+	    } else {
+		// 소켓 연결 해제 시, 상태 및 플래그 초기화
+		K10_reset_flags();
+		g_K10_Measure.mode = G_K00_MEASURE_MODE_INVALID;  // 측정 모드를 무효로 설정
+		g_K10_System_State		 = K10_ST_IDLE;		  // 대기 상태로 전환
+	    }
 	}
 	vTaskDelete(NULL);	// 태스크 종료
 }

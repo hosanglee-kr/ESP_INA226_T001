@@ -20,10 +20,27 @@ static IPAddress 	g_K30_WifiStation_SecondaryDNS(8, 8, 4, 4);	   // 보조 DNS �
 const char*			g_K30_wifi_AP_SSID = "ESP32_METER";  // 비밀번호 없는 Access Point 모드의 SSID
 
 // 함수 선언
+<<<<<<< HEAD
 void		  		K30_wifi_init();
 static void	  		K30_wifi_start_as_ap();
 static void	  		K30_wifi_start_as_station();
 static void	  		K30_wifi_start_as_station_static_IP();
+=======
+void		  K10_wifi_init();
+void              K10_AsyncWebSrv_init();
+void		  socket_event_handler(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType type, void *arg, uint8_t *data, size_t len);
+void		  socket_handle_message(void *arg, uint8_t *data, size_t len);
+static void	  wifi_start_as_ap();
+static void	  wifi_start_as_station();
+static void	  wifi_start_as_station_static_IP();
+static String     string_processor(const String &var);
+static void	  not_found_handler(AsyncWebServerRequest *request);
+static void	  index_page_handler(AsyncWebServerRequest *request);
+static void	  set_defaults_handler(AsyncWebServerRequest *request);
+static void	  get_handler(AsyncWebServerRequest *request);
+static void	  restart_handler(AsyncWebServerRequest *request);
+// static void	  capture_handler(AsyncWebServerRequest *request);
+>>>>>>> 6d7eb5a1d884bad4f634dd4cf7f5dafa8e929aba
 
 
 
@@ -99,9 +116,13 @@ static void K30_wifi_start_as_station() {
  * 또한 mDNS 서비스를 시작하여 "http://meter.local" 도메인으로 접속할 수 있도록 설정합니다.
  * 웹서버와 웹소켓 서버도 이 함수에서 초기화됩니다.
  */
+<<<<<<< HEAD
 
 
 void K30_wifi_init() {
+=======
+void K10_wifi_init() {
+>>>>>>> 6d7eb5a1d884bad4f634dd4cf7f5dafa8e929aba
 	delay(100);	 // 초기화 딜레이
 
 	// 저장된 SSID가 없으면 AP 모드로 시작
@@ -116,5 +137,162 @@ void K30_wifi_init() {
 		ESP_LOGI(G_K30_TAG, "Error starting mDNS service");	 // mDNS 시작 실패 로그
 	}
 
+<<<<<<< HEAD
 
 }
+=======
+	
+}
+
+void K10_AsyncWebSrv_init(){
+	pServer = new AsyncWebServer(80);  // HTTP 서버 생성 (포트 80)
+	if (pServer == nullptr) {
+		ESP_LOGE(G_K30_TAG, "Error creating AsyncWebServer!");	// 서버 생성 실패 시 로그 출력
+		ESP.restart();											// 재시작
+	}
+
+	// 웹소켓 핸들러 설정
+	ws.onEvent(socket_event_handler);  // 웹소켓 이벤트 처리 함수 등록
+	pServer->addHandler(&ws);		   // 웹소켓을 HTTP 서버에 추가
+
+	// 웹서버 핸들러 설정
+	pServer->onNotFound(not_found_handler);					   // 잘못된 경로로의 요청을 처리하는 핸들러 (404 응답)
+	pServer->on("/", HTTP_GET, index_page_handler);			   // 루트 경로("/")로의 GET 요청을 처리하는 핸들러 (홈페이지)
+	pServer->on("/defaults", HTTP_GET, set_defaults_handler);  // 설정 재설정 요청을 처리하는 핸들러
+	pServer->on("/get", HTTP_GET, get_handler);				   // GET 요청을 처리하여 클라이언트에서 SSID 및 비밀번호 변경 가능
+	pServer->on("/restart", HTTP_GET, restart_handler);		   // ESP32 재시작 요청을 처리하는 핸들러
+
+	//pServer->onNotFound(not_found_handler);
+        //pServer->on("/", HTTP_GET, index_page_handler);
+        pServer->on("/cv_chart", HTTP_GET, cv_chart_handler);
+        pServer->on("/cv_meter", HTTP_GET, cv_meter_handler);
+        pServer->on("/freq_counter", HTTP_GET, freq_counter_handler);
+        // pServer->on("/defaults", HTTP_GET, set_defaults_handler);
+        // pServer->on("/get", HTTP_GET, get_handler);
+        // pServer->on("/restart", HTTP_GET, restart_handler);
+	
+	// LittleFS 파일 시스템에서 정적 파일 제공 (예: HTML, CSS, JS 파일)
+	pServer->serveStatic("/", LittleFS, "/");
+
+	pServer->begin();					 // 웹 서버 시작
+	MDNS.addService("http", "tcp", 80);  // mDNS 서비스에 HTTP 추가
+}
+
+/*
+ * 웹소켓 이벤트 핸들러 함수.
+ * 클라이언트가 웹소켓에 연결, 메시지를 보냄, 연결을 끊음 등의 이벤트가 발생할 때 호출됩니다.
+ * AWS(WebSocket) 이벤트 타입에 따라 다르게 처리합니다.
+ */
+void socket_event_handler(AsyncWebSocket	   *server,
+						  AsyncWebSocketClient *client,
+						  AwsEventType			type,
+						  void				   *arg,
+						  uint8_t			   *data,
+						  size_t				len) {
+	switch (type) {
+		case WS_EVT_CONNECT:  // 클라이언트가 웹소켓에 연결되었을 때
+			ESP_LOGI(G_K30_TAG, "WebSocket client #%u connected from %s\n", client->id(), client->remoteIP().toString().c_str());
+			ClientID			= client->id();	 // 클라이언트 ID 저장
+			SocketConnectedFlag = true;			 // 소켓 연결 플래그 설정
+			break;
+
+		case WS_EVT_DISCONNECT:	 // 클라이언트가 웹소켓 연결을 끊었을 때
+			ESP_LOGI(G_K30_TAG, "WebSocket client #%u disconnected\n", client->id());
+			SocketConnectedFlag = false;  // 소켓 연결 플래그 해제
+			ClientID			= 0;	  // 클라이언트 ID 초기화
+			break;
+
+		case WS_EVT_DATA:							// 클라이언트가 데이터를 보냈을 때
+			socket_handle_message(arg, data, len);	// 데이터 처리 함수 호출
+			break;
+
+		case WS_EVT_PONG:	// PONG 메시지 (웹소켓에서 핑에 대한 응답) 발생 시
+		case WS_EVT_ERROR:	// 웹소켓 오류 발생 시
+			break;
+	}
+}
+
+/*
+ * 클라이언트로부터 수신된 메시지를 처리하는 함수.
+ * 웹소켓을 통해 수신된 데이터를 분석하여 명령어를 처리합니다.
+ * 메시지가 텍스트 형식(WS_TEXT)으로 전송되었는지 확인 후 처리합니다.
+ */
+void socket_handle_message(void *arg, uint8_t *data, size_t len) {
+	AwsFrameInfo *info = (AwsFrameInfo *)arg;
+
+	// 메시지가 완성되었고, 텍스트 형식이며, 길이가 맞는지 확인
+	if (info->final && info->index == 0 && info->len == len && info->opcode == WS_TEXT) {
+		// 수신된 메시지에 따른 동작 수행
+		if (data[0] == 'x') {
+			// 'x' 명령어: 마지막 패킷 ACK 플래그 설정
+			LastPacketAckFlag = true;
+		} else if (data[0] == 'm') {
+			// 'm' 명령어: 전류 및 전압 측정 모드 설정
+			g_K10_Measure.mode			   = G_K00_MEASURE_MODE_CURRENT_VOLTAGE;
+			g_K10_Measure.m.cv_meas.nSamples = 1;						// 샘플 수 설정
+			g_K10_Measure.m.cv_meas.cfg	   = Config[1].reg;			// 측정 설정
+			g_K10_Measure.m.cv_meas.periodUs = Config[1].periodUs;	// 측정 주기 설정
+			g_K10_Measure.m.cv_meas.scale	   = (int)(data[1] - '0');	// 스케일 설정
+			CVCaptureFlag			   = true;					// 전류/전압 캡처 플래그 설정
+		} else if (data[0] == 'f') {
+			// 'f' 명령어: 주파수 측정 모드 설정
+			g_K10_Measure.mode	= G_K00_MEASURE_MODE_FREQUENCY;
+			FreqCaptureFlag = true;	 // 주파수 캡처 플래그 설정
+		} else {
+			// JSON 형식의 메시지 처리 (고급 명령어)
+			JsonDocument json;
+			// const uint8_t size = JSON_OBJECT_SIZE(4);  // JSON 객체 크기 설정
+			// StaticJsonDocument<size> json;  // JSON 문서 생성
+			DeserializationError err = deserializeJson(json, data);	 // JSON 데이터 역직렬화
+			if (err) {
+				ESP_LOGI(G_K30_TAG, "deserializeJson() failed with code %s", err.c_str());	// 오류 시 로그 출력
+				return;
+			}
+
+			const char *szAction = json["action"];	// 액션 필드 추출
+
+			// 'cv_capture' 명령어: 전류/전압 캡처 설정
+			if (strcmp(szAction, "cv_capture") == 0) {
+				const char *szCfgIndex		 = json["cfgIndex"];
+				const char *szCaptureSeconds = json["captureSecs"];
+				const char *szScale			 = json["scale"];
+
+				int cfgIndex	   = strtol(szCfgIndex, NULL, 10);		   // 설정 인덱스 변환
+				int captureSeconds = strtol(szCaptureSeconds, NULL, 10);   // 캡처 시간 변환
+				int sampleRate	   = 1000000 / Config[cfgIndex].periodUs;  // 샘플링 속도 계산
+				int numSamples	   = captureSeconds * sampleRate;		   // 총 샘플 수 계산
+				int scale		   = strtol(szScale, NULL, 10);			   // 스케일 변환
+
+				// 측정 모드 및 설정 적용
+				g_K10_Measure.mode			   = G_K00_MEASURE_MODE_CURRENT_VOLTAGE;
+				g_K10_Measure.m.cv_meas.cfg	   = Config[cfgIndex].reg;
+				g_K10_Measure.m.cv_meas.scale	   = scale;
+				g_K10_Measure.m.cv_meas.nSamples = numSamples;
+				g_K10_Measure.m.cv_meas.periodUs = Config[cfgIndex].periodUs;
+
+				// 로그 출력
+				ESP_LOGI(G_K30_TAG, "Mode = %d", g_K10_Measure.mode);
+				ESP_LOGI(G_K30_TAG, "cfgIndex = %d", cfgIndex);
+				ESP_LOGI(G_K30_TAG, "scale = %d", scale);
+				ESP_LOGI(G_K30_TAG, "nSamples = %d", numSamples);
+				ESP_LOGI(G_K30_TAG, "periodUs = %d", Config[cfgIndex].periodUs);
+
+				CVCaptureFlag = true;  // 캡처 플래그 설정
+			}
+			// 'oscfreq' 명령어: 주파수 측정 설정
+			else if (strcmp(szAction, "oscfreq") == 0) {
+				g_K10_Measure.mode			= G_K00_MEASURE_MODE_FREQUENCY;
+				const char *szOscFreqHz = json["freqhz"];
+
+				ESP_LOGI(G_K30_TAG, "json[\"action\"]= %s\n", szAction);	 // 액션 로그 출력
+				ESP_LOGI(G_K30_TAG, "json[\"freqhz\"]= %s\n", szOscFreqHz);	 // 주파수 로그 출력
+
+				OscFreqHz	= (uint32_t)strtol(szOscFreqHz, NULL, 10);	// 주파수 값 변환
+				OscFreqFlag = true;										// 주파수 측정 플래그 설정
+			}
+		}
+	}
+}
+
+#endif	// WIFI_CFG_H_
+>>>>>>> 6d7eb5a1d884bad4f634dd4cf7f5dafa8e929aba
