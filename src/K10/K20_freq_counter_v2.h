@@ -1,6 +1,5 @@
 // freq_counter.h 및 freq_counter.cpp 합본 파일
-#ifndef FREQ_METER_H_
-#define FREQ_METER_H_
+#pragma once
 
 #include <Arduino.h>
 #include <stdio.h>                            // 표준 입출력 라이브러리
@@ -215,5 +214,3 @@ void K20_task_freq_counter(void* pvParam) {
 	}
 }
 
-
-#endif // FREQ_METER_H_
