@@ -31,16 +31,10 @@ const char*		G_K10_Firmware_Rev = "0.97";
 static const char* 	G_K10_TAG  = "K10_main";
 
 // 전역 변수 선언
-<<<<<<< HEAD
 volatile int		 	TxSamples;			   			// 웹소켓으로 전송할 샘플 수
 
 extern volatile bool 	g_K35_WebSocket_ConnectedFlag;  			// 웹소켓 연결 상태 플래그
 extern uint32_t		 	g_K35_WS_ClientID;			   	// 연결된 웹소켓 클라이언트 ID
-=======
-volatile int		TxSamples;			   // 웹소켓으로 전송할 샘플 수
-extern volatile bool 	SocketConnectedFlag;  // 웹소켓 연결 상태 플래그
-extern uint32_t		ClientID;			   // 연결된 웹소켓 클라이언트 ID
->>>>>>> 6d7eb5a1d884bad4f634dd4cf7f5dafa8e929aba
 
 // 태스크 우선순위 설정
 #define 		G_K10_WIFI_TASK_PRIORITY			  	1
@@ -51,12 +45,6 @@ extern uint32_t		ClientID;			   // 연결된 웹소켓 클라이언트 ID
 extern volatile MEASURE_t 		g_K10_Measure;		   // 측정 데이터를 저장하는 구조체
 extern volatile int16_t*  		g_K10_Buffer;  		// 측정 데이터를 저장할 버퍼
 extern int				   		g_K40_MaxSamples;	   // 측정할 수 있는 최대 샘플 수
-=======
-volatile MEASURE_t 	g_K10_Measure;		   // 측정 데이터를 저장하는 구조체
-volatile int16_t*  	g_K10_Buffer = NULL;  // 측정 데이터를 저장할 버퍼
-int			MaxSamples;	   // 측정할 수 있는 최대 샘플 수
->>>>>>> 6d7eb5a1d884bad4f634dd4cf7f5dafa8e929aba
-
 
 enum K10_SYSTEM_STATE_TYPE {
 			K10_ST_IDLE	= 1,
@@ -95,6 +83,7 @@ void K10_init() {
 
 	// 직렬 포트 초기화
 	Serial.begin(115200);
+	
 	ESP_LOGI(G_K10_TAG, "ESP32_INA226 v%s compiled on %s at %s\n\n", G_K10_Firmware_Rev, __DATE__, __TIME__);
 	ESP_LOGI(G_K10_TAG, "Max task priority = %d", configMAX_PRIORITIES - 1);
 	ESP_LOGI(G_K10_TAG, "arduino loopTask : setup() running on core %d with priority %d", xPortGetCoreID(), uxTaskPriorityGet(NULL));
@@ -156,13 +145,9 @@ static void K10_wifi_task(void* pVParameter) {
 	K10_LittleFS_init();
 	
 	// Wi-Fi 및 웹소켓 초기화 (웹 서버 및 웹소켓 서버 시작)
-<<<<<<< HEAD
 	K30_wifi_init();
 
 	K35_WebSrv_init();
-=======
-	K10_wifi_init();
->>>>>>> 6d7eb5a1d884bad4f634dd4cf7f5dafa8e929aba
 
 	K10_AsyncWebSrv_init();
 
@@ -179,7 +164,6 @@ static void K10_wifi_task(void* pVParameter) {
 
 	// 메인 루프: 웹소켓 클라이언트와의 통신 처리
 	while (1) {
-<<<<<<< HEAD
 		vTaskDelay(1);		  // 다른 태스크가 실행될 수 있도록 잠시 대기
 		g_K35_WebSocket.cleanupClients();  // 웹소켓 클라이언트 정리 (연결 종료된 클라이언트 정리)
 
@@ -187,16 +171,6 @@ static void K10_wifi_task(void* pVParameter) {
 			switch (g_K10_Measure.mode) {			// 현재 측정 모드에 따라 처리
 				default:
 					break;
-=======
-	  vTaskDelay(1);		  // 다른 태스크가 실행될 수 있도록 잠시 대기
-	  ws.cleanupClients();  // 웹소켓 클라이언트 정리 (연결 종료된 클라이언트 정리)
-
-	  if (SocketConnectedFlag == true) {	// 클라이언트가 연결된 상태일 때
-	    switch (g_K10_Measure.mode) {			// 현재 측정 모드에 따라 처리
-	      default:
-		break;
->>>>>>> 6d7eb5a1d884bad4f634dd4cf7f5dafa8e929aba
-
 	      // 전류/전압 측정 모드 처리
 	      case G_K00_MEASURE_MODE_CURRENT_VOLTAGE:
 		switch (g_K10_System_State) {
@@ -300,33 +274,7 @@ static void K10_wifi_task(void* pVParameter) {
 							break;
 					}
 					break;
-=======
-		  case K10_ST_IDLE:	// 대기 상태
-		    if (MeterReadyFlag == true) {  // 전류/전압 측정 완료 시
-			MeterReadyFlag	  = false;
-			LastPacketAckFlag = false;
-			numBytes		  = 5 * sizeof(int16_t);		  // 전송할 데이터 크기 (5개의 int16_t 데이터)
-			ws.binary(ClientID, (uint8_t*)g_K10_Buffer, numBytes);  // 웹소켓을 통해 클라이언트로 데이터 전송
-			g_K10_System_State = K10_ST_METER_COMPLETE;						  // 측정 완료 상태로 전환
-		    } else if (GateOpenFlag) {							  // 게이트가 열렸을 때
-			GateOpenFlag = false;
-			ESP_LOGD(G_K10_TAG, "Socket msg : Capture Gate Open");
-			msg = MSG_GATE_OPEN;					 // 게이트 열림 메시지
-			ws.binary(ClientID, (uint8_t*)&msg, 2);	 // 게이트 열림 상태를 클라이언트로 전송
-		    } else if (DataReadyFlag == true) {			 // 데이터가 준비된 경우
-			DataReadyFlag = false;
-			ESP_LOGD(G_K10_TAG, "Socket msg : Tx Start");
-			numBytes = (3 + TxSamples * 2) * sizeof(int16_t);  // 전송할 데이터 크기 계산
-			t1		 = micros();							   // 전송 시작 시간 기록
-			ws.binary(ClientID, (uint8_t*)g_K10_Buffer, numBytes);   // 데이터 전송
-			bufferOffset += numBytes / 2;					   // 버퍼 오프셋 업데이트 (샘플 단위)
-			if (EndCaptureFlag == true) {					   // 캡처가 종료되면
-				EndCaptureFlag = false;
-				g_K10_System_State = K10_ST_TX_COMPLETE;  // 전송 완료 상태로 전환
-			} else {
-				g_K10_System_State = K10_ST_TX;	// 계속 전송 상태 유지
->>>>>>> 6d7eb5a1d884bad4f634dd4cf7f5dafa8e929aba
-			}
+			    }
 		    }
 		    break;
 
