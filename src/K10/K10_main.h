@@ -41,7 +41,6 @@ extern uint32_t		 	g_K35_WS_ClientID;			   	// 연결된 웹소켓 클라이언�
 #define 		G_K10_CURRENT_VOLTAGE_TASK_PRIORITY 	(configMAX_PRIORITIES - 1)	// 24
 #define 		G_K10_FREQUENCY_TASK_PRIORITY		  	(configMAX_PRIORITIES - 2)	// 23
 
-<<<<<<< HEAD
 extern volatile MEASURE_t 		g_K10_Measure;		   // 측정 데이터를 저장하는 구조체
 extern volatile int16_t*  		g_K10_Buffer;  		// 측정 데이터를 저장할 버퍼
 extern int				   		g_K40_MaxSamples;	   // 측정할 수 있는 최대 샘플 수
@@ -177,7 +176,6 @@ static void K10_wifi_task(void* pVParameter) {
 		  default:
 		    break;
 
-<<<<<<< HEAD
 						case K10_ST_IDLE:					   // 대기 상태
 							if (MeterReadyFlag == true) {  // 전류/전압 측정 완료 시
 								MeterReadyFlag	  = false;
