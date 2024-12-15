@@ -20,19 +20,15 @@ static IPAddress 	g_K30_WifiStation_SecondaryDNS(8, 8, 4, 4);	   // 보조 DNS �
 const char*			g_K30_wifi_AP_SSID = "ESP32_METER";  // 비밀번호 없는 Access Point 모드의 SSID
 
 // 함수 선언
-<<<<<<< HEAD
 void		  		K30_wifi_init();
 static void	  		K30_wifi_start_as_ap();
 static void	  		K30_wifi_start_as_station();
 static void	  		K30_wifi_start_as_station_static_IP();
-=======
-void		  K10_wifi_init();
+
 void              K10_AsyncWebSrv_init();
 void		  socket_event_handler(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType type, void *arg, uint8_t *data, size_t len);
 void		  socket_handle_message(void *arg, uint8_t *data, size_t len);
-static void	  wifi_start_as_ap();
-static void	  wifi_start_as_station();
-static void	  wifi_start_as_station_static_IP();
+
 static String     string_processor(const String &var);
 static void	  not_found_handler(AsyncWebServerRequest *request);
 static void	  index_page_handler(AsyncWebServerRequest *request);
@@ -40,8 +36,6 @@ static void	  set_defaults_handler(AsyncWebServerRequest *request);
 static void	  get_handler(AsyncWebServerRequest *request);
 static void	  restart_handler(AsyncWebServerRequest *request);
 // static void	  capture_handler(AsyncWebServerRequest *request);
->>>>>>> 6d7eb5a1d884bad4f634dd4cf7f5dafa8e929aba
-
 
 
 /*
@@ -116,13 +110,8 @@ static void K30_wifi_start_as_station() {
  * 또한 mDNS 서비스를 시작하여 "http://meter.local" 도메인으로 접속할 수 있도록 설정합니다.
  * 웹서버와 웹소켓 서버도 이 함수에서 초기화됩니다.
  */
-<<<<<<< HEAD
 
-
-void K30_wifi_init() {
-=======
 void K10_wifi_init() {
->>>>>>> 6d7eb5a1d884bad4f634dd4cf7f5dafa8e929aba
 	delay(100);	 // 초기화 딜레이
 
 	// 저장된 SSID가 없으면 AP 모드로 시작
@@ -135,13 +124,7 @@ void K10_wifi_init() {
 	// mDNS 서비스 시작 (http://meter.local)
 	if (!MDNS.begin("meter")) {
 		ESP_LOGI(G_K30_TAG, "Error starting mDNS service");	 // mDNS 시작 실패 로그
-	}
-
-<<<<<<< HEAD
-
-}
-=======
-	
+	}	
 }
 
 void K10_AsyncWebSrv_init(){
@@ -294,5 +277,3 @@ void socket_handle_message(void *arg, uint8_t *data, size_t len) {
 	}
 }
 
-#endif	// WIFI_CFG_H_
->>>>>>> 6d7eb5a1d884bad4f634dd4cf7f5dafa8e929aba
