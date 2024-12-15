@@ -25,6 +25,7 @@ static void	  		K30_wifi_start_as_ap();
 static void	  		K30_wifi_start_as_station();
 static void	  		K30_wifi_start_as_station_static_IP();
 
+/*
 void              K10_AsyncWebSrv_init();
 void		  socket_event_handler(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType type, void *arg, uint8_t *data, size_t len);
 void		  socket_handle_message(void *arg, uint8_t *data, size_t len);
@@ -36,7 +37,7 @@ static void	  set_defaults_handler(AsyncWebServerRequest *request);
 static void	  get_handler(AsyncWebServerRequest *request);
 static void	  restart_handler(AsyncWebServerRequest *request);
 // static void	  capture_handler(AsyncWebServerRequest *request);
-
+*/
 
 /*
  * AP 모드에서 Wi-Fi 액세스 포인트를 시작하는 함수.
@@ -127,6 +128,7 @@ void K10_wifi_init() {
 	}	
 }
 
+/*
 void K10_AsyncWebSrv_init(){
 	pServer = new AsyncWebServer(80);  // HTTP 서버 생성 (포트 80)
 	if (pServer == nullptr) {
@@ -160,12 +162,13 @@ void K10_AsyncWebSrv_init(){
 	pServer->begin();					 // 웹 서버 시작
 	MDNS.addService("http", "tcp", 80);  // mDNS 서비스에 HTTP 추가
 }
-
+*/
 /*
  * 웹소켓 이벤트 핸들러 함수.
  * 클라이언트가 웹소켓에 연결, 메시지를 보냄, 연결을 끊음 등의 이벤트가 발생할 때 호출됩니다.
  * AWS(WebSocket) 이벤트 타입에 따라 다르게 처리합니다.
  */
+/*
 void socket_event_handler(AsyncWebSocket	   *server,
 						  AsyncWebSocketClient *client,
 						  AwsEventType			type,
@@ -194,12 +197,13 @@ void socket_event_handler(AsyncWebSocket	   *server,
 			break;
 	}
 }
-
+*/
 /*
  * 클라이언트로부터 수신된 메시지를 처리하는 함수.
  * 웹소켓을 통해 수신된 데이터를 분석하여 명령어를 처리합니다.
  * 메시지가 텍스트 형식(WS_TEXT)으로 전송되었는지 확인 후 처리합니다.
  */
+/*
 void socket_handle_message(void *arg, uint8_t *data, size_t len) {
 	AwsFrameInfo *info = (AwsFrameInfo *)arg;
 
@@ -276,4 +280,4 @@ void socket_handle_message(void *arg, uint8_t *data, size_t len) {
 		}
 	}
 }
-
+*/
