@@ -64,9 +64,6 @@
 #pragma once
 
 
-#ifndef WIFI_CFG_H_
-#define WIFI_CFG_H_
-
 #include <Arduino.h>
 #include <ArduinoJson.h>
 #include <AsyncTCP.h>
@@ -378,4 +375,3 @@ void socket_handle_message(void *arg, uint8_t *data, size_t len) {
 	}
 }
 
-#endif	// WIFI_CFG_H_
