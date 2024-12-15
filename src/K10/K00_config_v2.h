@@ -1,5 +1,4 @@
-#ifndef CONFIG_H_
-#define CONFIG_H_
+#pragma once
 
 // 코어 정의 (ESP32와 같은 듀얼 코어 CPU에서 특정 코어에서 작업을 실행할 때 사용)
 #define g_K10_CPU_CORE_0				 0	// 첫 번째 코어 (Core 0)
@@ -67,4 +66,3 @@ typedef struct {
 volatile MEASURE_t g_K10_Measure;	// 측정 결과와 설정을 담은 전역 구조체
 volatile int16_t*  g_K10_Buffer = NULL;		// 측정 데이터 버퍼 (정수형 배열)
 
-#endif
