@@ -148,7 +148,7 @@ static void K10_wifi_task(void* pVParameter) {
 
 	K35_WebSrv_init();
 
-	K10_AsyncWebSrv_init();
+	//// K10_AsyncWebSrv_init();
 
 	K10_SYSTEM_STATE_TYPE g_K10_System_State = K10_ST_IDLE;  	// 상태 초기화 (대기 상태)
 	//int				  g_K10_System_State		   = ST_IDLE;  		// 상태 초기화 (대기 상태)
