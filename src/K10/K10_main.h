@@ -170,12 +170,11 @@ static void K10_wifi_task(void* pVParameter) {
 			switch (g_K10_Measure.mode) {			// 현재 측정 모드에 따라 처리
 				default:
 					break;
-	      // 전류/전압 측정 모드 처리
-	      case G_K00_MEASURE_MODE_CURRENT_VOLTAGE:
-		switch (g_K10_System_State) {
-		  default:
-		    break;
-
+	            // 전류/전압 측정 모드 처리
+	            case G_K00_MEASURE_MODE_CURRENT_VOLTAGE:
+		            switch (g_K10_System_State) {
+		                default:
+		                    break;
 						case K10_ST_IDLE:					   // 대기 상태
 							if (MeterReadyFlag == true) {  // 전류/전압 측정 완료 시
 								MeterReadyFlag	  = false;
@@ -278,19 +277,19 @@ static void K10_wifi_task(void* pVParameter) {
 
 		  case K10_ST_TX:														   // 데이터 전송 중 상태
 		    if ((DataReadyFlag == true) && (LastPacketAckFlag == true)) {  // 데이터 준비 완료 및 마지막 패킷 ACK 수신
-			LastPacketAckFlag = false;
-			DataReadyFlag	  = false;
-			t2		  = micros();								// 전송 완료 시간 기록
-			ESP_LOGD(G_K10_TAG, "Socket msg : %dus, Tx ...", t2 - t1);	// 전송 시간 출력
-			t1		 = t2;												// 새로운 전송 시간 갱신
-			pb		 = g_K10_Buffer + bufferOffset;							// 전송할 데이터 버퍼
-			numBytes = (1 + TxSamples * 2) * sizeof(int16_t);			// 전송할 바이트 수 계산
-			ws.binary(ClientID, (uint8_t*)pb, numBytes);				// 웹소켓으로 데이터 전송
-			bufferOffset += numBytes / 2;								// 버퍼 오프셋 갱신
-			if (EndCaptureFlag == true) {								// 캡처 종료 플래그 확인
-			    EndCaptureFlag = false;
-			    g_K10_System_State = K10_ST_TX_COMPLETE;  // 전송 완료 상태로 전환
-			}
+			    LastPacketAckFlag = false;
+			    DataReadyFlag	  = false;
+			    t2		  = micros();								// 전송 완료 시간 기록
+			    ESP_LOGD(G_K10_TAG, "Socket msg : %dus, Tx ...", t2 - t1);	// 전송 시간 출력
+			    t1		 = t2;												// 새로운 전송 시간 갱신
+			    pb		 = g_K10_Buffer + bufferOffset;							// 전송할 데이터 버퍼
+			    numBytes = (1 + TxSamples * 2) * sizeof(int16_t);			// 전송할 바이트 수 계산
+			    ws.binary(ClientID, (uint8_t*)pb, numBytes);				// 웹소켓으로 데이터 전송
+			    bufferOffset += numBytes / 2;								// 버퍼 오프셋 갱신
+			    if (EndCaptureFlag == true) {								// 캡처 종료 플래그 확인
+			        EndCaptureFlag = false;
+			        g_K10_System_State = K10_ST_TX_COMPLETE;  // 전송 완료 상태로 전환
+			    }
 		     }
 		     break;
 
