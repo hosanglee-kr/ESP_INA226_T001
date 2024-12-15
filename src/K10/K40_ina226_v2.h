@@ -56,8 +56,7 @@
  * INA226을 사용한 전류 및 전압 측정 작업을 용이하게 하며, 이 라이브러리를 통해 다양한 캡처 모드 및 전송 방식을 사용할 수 있습니다.
  */
 
-#ifndef INA226_H_
-#define INA226_H_
+#pragma once
 
 #include <Arduino.h>
 #include <Wire.h>
@@ -549,6 +548,3 @@ void ina226_test_capture() {
 		K40_INA226_capture_oneshot(g_K10_Measure, g_K10_Buffer, true);	// 원샷 캡처 함수 호출
 	}
 }
-
-
-#endif
