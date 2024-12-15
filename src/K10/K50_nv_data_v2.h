@@ -1,7 +1,6 @@
 // nv_data.h
 
-#ifndef NVDATA_H_
-#define NVDATA_H_
+#pragma once
 
 #include <Arduino.h>
 #include <Preferences.h>
@@ -68,4 +67,3 @@ void nv_options_store(OPTIONS_t &options) {
     nv_options_print(options); // 저장된 옵션 출력
 }
 
-#endif // NVDATA_H_
