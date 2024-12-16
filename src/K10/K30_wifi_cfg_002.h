@@ -3,8 +3,8 @@
 #include <WiFi.h>
 #include <ESPmDNS.h>
 
-#include "K00_config_v2.h"
-#include "K50_nv_data_v2.h"
+#include "K00_config_002.h"
+#include "K50_nv_data_002.h"
 
 static const char*	G_K30_TAG = "K30_wifi_cfg";	// ESP32 로그 태그
 

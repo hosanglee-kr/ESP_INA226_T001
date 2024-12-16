@@ -5,8 +5,13 @@
 #include <stdio.h>                            // 표준 입출력 라이브러리
 #include <driver/ledc.h>                      // ESP32 LEDC 라이브러리
 #include <soc/pcnt_struct.h>                  // Pulse Counter 관련 구조체
-#include <driver/pcnt.h>                      // ESP32 PCNT (Pulse Counter) 라이브러리
-#include "config.h"                           // 프로젝트 설정 관련 헤더
+
+#include <driver/pulse_cnt.h>
+//#include <driver/pcnt.h>                      // ESP32 PCNT (Pulse Counter) 라이브러리
+
+
+#include "K00_config_002.h"
+//#include "config.h"                           // 프로젝트 설정 관련 헤더
 
 
 // 주파수 측정 관련 전역 변수들
