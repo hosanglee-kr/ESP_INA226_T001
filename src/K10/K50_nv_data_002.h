@@ -34,12 +34,12 @@ void K50_NV_options_load(OPTIONS_t &p_options) {
     if (g_K50_NV_Prefs.begin("options", MODE_READ_ONLY) == false) {
         Serial.println("Preferences 'options' namespace not found, creating with defaults.");
         g_K50_NV_Prefs.end(); // Preferences 종료
-        nv_options_reset(p_options); // 기본값으로 초기화
+        K50_NV_options_reset(p_options); // 기본값으로 초기화
     } else {
         p_options.ssid = g_K50_NV_Prefs.getString("ssid", ""); // SSID 읽기
         p_options.password = g_K50_NV_Prefs.getString("pwd", ""); // 비밀번호 읽기
         g_K50_NV_Prefs.end(); // Preferences 종료
-        nv_options_print(p_options); // 읽은 옵션 출력
+        K50_NV_options_print(p_options); // 읽은 옵션 출력
     }
 }
 
@@ -52,9 +52,9 @@ void K50_NV_options_print(OPTIONS_t &p_options) {
 void K50_NV_options_reset(OPTIONS_t &p_options) {
     p_options.ssid = ""; // SSID 초기화
     p_options.password = ""; // 비밀번호 초기화
-    nv_options_store(p_options); // 초기화된 옵션 저장
+    K50_NV_options_store(p_options); // 초기화된 옵션 저장
     Serial.println("Set Default Options"); // 기본값으로 설정되었다고 출력
-    nv_options_print(p_options); // 초기화된 옵션 출력
+    K50_NV_options_print(p_options); // 초기화된 옵션 출력
 }
 
 // 옵션을 저장하는 함수
@@ -64,6 +64,6 @@ void K50_NV_options_store(OPTIONS_t &p_options) {
     g_K50_NV_Prefs.putString("ssid", p_options.ssid); // SSID 저장
     g_K50_NV_Prefs.putString("pwd", p_options.password); // 비밀번호 저장
     g_K50_NV_Prefs.end(); // Preferences 종료
-    nv_options_print(p_options); // 저장된 옵션 출력
+    K50_NV_options_print(p_options); // 저장된 옵션 출력
 }
 
