@@ -21,11 +21,6 @@ enum T_K10_MEAURE_MODE {
 	G_K00_MEASURE_MODE_INVALID		 			//	33	 // 유효하지 않은 모드 (에러 처리용
 };
 
-// // 측정 모드 정의
-// #define MODE_CURRENT_VOLTAGE 			11	 // 전류 및 전압 측정 모드
-// #define MODE_FREQUENCY		 			22	 // 주파수 측정 모드
-// #define MODE_INVALID		 				33	 // 유효하지 않은 모드 (에러 처리용)
-
 
 // 전류 및 전압 측정을 위한 구조체 정의
 typedef struct {

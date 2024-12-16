@@ -82,7 +82,7 @@
 
 #include "K40_ina226_002.h"
 #include "K50_nv_data_002.h"
-extern OPTIONS_t g_K50_NV_Options; 
+extern K50_OPTIONS_t g_K50_NV_Options; 
 
 static const char*    G_K35_TAG = "K25_WebSrv_cfg";    // ESP32 로그 태그
 
@@ -97,26 +97,26 @@ AsyncWebServer*       g_K35_pWebSrv = NULL;     // 웹 서버 포인터
 uint32_t              g_K35_WS_ClientID = 0;    // 연결된 클라이언트 ID 저장
 
 volatile bool         g_K35_WebSocket_ConnectedFlag    = false;    // 소켓 연결 상태 플래그
-volatile bool         CVCaptureFlag        = false;    // 전류/전압 캡처 플래그
-extern volatile bool  FreqCaptureFlag;                // 주파수 캡처 플래그
+volatile bool         g_K40_INA226_CVCaptureFlag        = false;    // 전류/전압 캡처 플래그
+extern volatile bool  g_K20_FreqCaptureFlag;                // 주파수 캡처 플래그
 volatile bool         LastPacketAckFlag;                // 마지막 패킷 ACK 플래그
 
 
 
 void                K35_WebSrv_init();
-void                socket_event_handler(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType type, void *arg, uint8_t *data, size_t len);
-void                socket_handle_message(void *arg, uint8_t *data, size_t len);
+void                K35_WebSocket_event_handler(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType type, void *arg, uint8_t *data, size_t len);
+void                K35_WebSocket_handle_message(void *arg, uint8_t *data, size_t len);
 
-static String       K30_string_processor(const String &var);
-static void         not_found_handler(AsyncWebServerRequest *request);
-static void         index_page_handler(AsyncWebServerRequest *request);
-static void         set_defaults_handler(AsyncWebServerRequest *request);
-static void         get_handler(AsyncWebServerRequest *request);
-static void         restart_handler(AsyncWebServerRequest *request);
-static void         capture_handler(AsyncWebServerRequest *request);
-static void         cv_chart_handler(AsyncWebServerRequest *request);
-static void         cv_meter_handler(AsyncWebServerRequest *request);
-static void         freq_counter_handler(AsyncWebServerRequest *request);
+static String       K35_Web_string_processor(const String &var);
+static void         K35_Web_not_found_handler(AsyncWebServerRequest *request);
+static void         K35_Web_index_page_handler(AsyncWebServerRequest *request);
+static void         K35_Web_set_defaults_handler(AsyncWebServerRequest *request);
+static void         K35_Web_get_handler(AsyncWebServerRequest *request);
+static void         K35_Web_restart_handler(AsyncWebServerRequest *request);
+//static void         K35_Web_capture_handler(AsyncWebServerRequest *request);
+static void         K35_Web_cv_chart_handler(AsyncWebServerRequest *request);
+static void         K35_Web_cv_meter_handler(AsyncWebServerRequest *request);
+static void         K35_Web_freq_counter_handler(AsyncWebServerRequest *request);
 
 
 void K35_WebSrv_init(){
@@ -127,19 +127,30 @@ void K35_WebSrv_init(){
     }
 
     // 웹소켓 핸들러 설정
-    g_K35_WebSocket.onEvent(socket_event_handler);  // 웹소켓 이벤트 처리 함수 등록
+    g_K35_WebSocket.onEvent(K35_WebSocket_event_handler);  // 웹소켓 이벤트 처리 함수 등록
     g_K35_pWebSrv->addHandler(&g_K35_WebSocket);           // 웹소켓을 HTTP 서버에 추가
 
     // 웹서버 핸들러 설정
-    g_K35_pWebSrv->onNotFound(not_found_handler);                       // 잘못된 경로로의 요청을 처리하는 핸들러 (404 응답)
-    g_K35_pWebSrv->on("/", HTTP_GET, index_page_handler);               // 루트 경로("/")로의 GET 요청을 처리하는 핸들러 (홈페이지)
-    g_K35_pWebSrv->on("/defaults", HTTP_GET, set_defaults_handler);  // 설정 재설정 요청을 처리하는 핸들러
-    g_K35_pWebSrv->on("/get", HTTP_GET, get_handler);                   // GET 요청을 처리하여 클라이언트에서 SSID 및 비밀번호 변경 가능
-    g_K35_pWebSrv->on("/restart", HTTP_GET, restart_handler);           // ESP32 재시작 요청을 처리하는 핸들러
+    g_K35_pWebSrv->onNotFound(K35_Web_not_found_handler);                       // 잘못된 경로로의 요청을 처리하는 핸들러 (404 응답)
 
-    g_K35_pWebSrv->on("/cv_chart", HTTP_GET, cv_chart_handler);
-    g_K35_pWebSrv->on("/cv_meter", HTTP_GET, cv_meter_handler);
-    g_K35_pWebSrv->on("/freq_counter", HTTP_GET, freq_counter_handler);
+    g_K35_pWebSrv->on("/", HTTP_GET, [](AsyncWebServerRequest *request) {
+        String v_logmessage = "Client:" + request->client()->remoteIP().toString() + " " + request->url();
+        //v_logmessage += " IR";
+        Serial.println(v_logmessage);
+
+        request->send(LittleFS, "/J10/index.html", String(), false, K35_Web_string_processor);    // HTML 파일 전송 
+        // request->send(LittleFS, X35_URL_IR_UI1_USER_FILE, String(), false, X25_Set_HtmlVarable_CallBack);
+    });
+    // g_K35_pWebSrv->on("/", HTTP_GET, K35_Web_index_page_handler);               // 루트 경로("/")로의 GET 요청을 처리하는 핸들러 (홈페이지)
+
+    
+    g_K35_pWebSrv->on("/defaults", HTTP_GET, K35_Web_set_defaults_handler);  // 설정 재설정 요청을 처리하는 핸들러
+    g_K35_pWebSrv->on("/get", HTTP_GET, K35_Web_get_handler);                   // GET 요청을 처리하여 클라이언트에서 SSID 및 비밀번호 변경 가능
+    g_K35_pWebSrv->on("/restart", HTTP_GET, K35_Web_restart_handler);           // ESP32 재시작 요청을 처리하는 핸들러
+
+    g_K35_pWebSrv->on("/cv_chart", HTTP_GET, K35_Web_cv_chart_handler);
+    g_K35_pWebSrv->on("/cv_meter", HTTP_GET, K35_Web_cv_meter_handler);
+    g_K35_pWebSrv->on("/freq_counter", HTTP_GET, K35_Web_freq_counter_handler);
 
     // LittleFS 파일 시스템에서 정적 파일 제공 (예: HTML, CSS, JS 파일)
     g_K35_pWebSrv->serveStatic("/", LittleFS, "/");
@@ -154,7 +165,7 @@ void K35_WebSrv_init(){
 //  웹 페이지에서 사용될 텍스트를 처리하기 위한 함수로, SSID, 패스워드 및 펌웨어 버전을 포함하여
 //  동적으로 값을 반환합니다. 예를 들어 웹 페이지의 텍스트 중 %SSID%가 있다면,
 //  현재 설정된 SSID 값을 반환합니다.
-static String K30_string_processor(const String &var) {
+static String K35_Web_string_processor(const String &var) {
     if (var == "FW_REV") {    // 펌웨어 버전을 요청한 경우
         return G_K10_Firmware_Rev;
     } else if (var == "SSID") {     // 현재 SSID를 요청한 경우
@@ -170,34 +181,34 @@ static String K30_string_processor(const String &var) {
 //  요청한 경로가 존재하지 않을 때 호출되며, 클라이언트에 404 상태 코드를 반환합니다.
 //  이는 잘못된 경로로의 요청을 처리하는 기본 핸들러입니다.
 
-static void not_found_handler(AsyncWebServerRequest *request) {
+static void K35_Web_not_found_handler(AsyncWebServerRequest *request) {
     request->send(404, "text/plain", "Not found");    // 404 응답 반환
 }
 
 // 기본 홈 페이지(index.html)를 제공하는 핸들러.
 // 웹 페이지 요청에 따라 LittleFS 파일 시스템에서 페이지를 로드합니다.
 // "/index.html" 파일을 브라우저에 전송합니다.
-static void index_page_handler(AsyncWebServerRequest *request) {
-    request->send(LittleFS, "/J10/index.html", String(), false, K30_string_processor);    // HTML 파일 전송
+static void K35_Web_index_page_handler(AsyncWebServerRequest *request) {
+    request->send(LittleFS, "/J10/index.html", String(), false, K35_Web_string_processor);    // HTML 파일 전송
 }
 
-static void cv_chart_handler(AsyncWebServerRequest *request) {
-    request->send(LittleFS, "/J10/cv_chart.html", String(), false, K30_string_processor);
+static void K35_Web_cv_chart_handler(AsyncWebServerRequest *request) {
+    request->send(LittleFS, "/J10/cv_chart.html", String(), false, K35_Web_string_processor);
     }
 
 
-static void cv_meter_handler(AsyncWebServerRequest *request) {
-    request->send(LittleFS, "/J10/cv_meter.html", String(), false, K30_string_processor);
+static void K35_Web_cv_meter_handler(AsyncWebServerRequest *request) {
+    request->send(LittleFS, "/J10/cv_meter.html", String(), false, K35_Web_string_processor);
     }
 
-static void freq_counter_handler(AsyncWebServerRequest *request) {
-    request->send(LittleFS, "/J10/freq_counter.html", String(), false, K30_string_processor);
+static void K35_Web_freq_counter_handler(AsyncWebServerRequest *request) {
+    request->send(LittleFS, "/J10/freq_counter.html", String(), false, K35_Web_string_processor);
     }
 
 // 기본 설정을 재설정하는 핸들러.
 // 네트워크 설정을 기본 값으로 재설정한 후, 웹페이지로 결과를 반환합니다.
 // 클라이언트는 설정이 초기화되었다는 메시지를 확인할 수 있습니다.
-static void set_defaults_handler(AsyncWebServerRequest *request) {
+static void K35_Web_set_defaults_handler(AsyncWebServerRequest *request) {
     K50_NV_options_reset(g_K50_NV_Options);                                                                          // 옵션을 기본 값으로 재설정
     request->send(200, "text/html", "Default options set<br><a href=\"/\">Return to Home Page</a>");  // 설정 완료 메시지 전송
 }
@@ -205,7 +216,7 @@ static void set_defaults_handler(AsyncWebServerRequest *request) {
 //  ESP32를 재시작하는 핸들러.
 //  요청을 받은 후, 클라이언트에 "Restarting ..." 메시지를 보여주고, ESP32를 재시작합니다.
 //  esp_restart() 함수를 호출하여 즉시 재시작합니다.
-static void restart_handler(AsyncWebServerRequest *request) {
+static void K35_Web_restart_handler(AsyncWebServerRequest *request) {
     request->send(200, "text/html", "Restarting ...");    // 클라이언트에 재시작 메시지 전송
     ESP_LOGI(G_K35_TAG, "Restarting ESP32");            // 로그 메시지 출력
     Serial.flush();                                        // 직렬 통신 버퍼 비우기
@@ -217,7 +228,7 @@ static void restart_handler(AsyncWebServerRequest *request) {
 //  클라이언트에서 보낸 파라미터를 처리하며, SSID 및 패스워드를 변경하는 기능을 담당합니다.
 //  변경된 정보는 영구 저장소에 저장됩니다.
 //  클라이언트가 GET 요청을 통해 SSID나 패스워드를 변경할 때 이 함수가 호출됩니다.
-static void get_handler(AsyncWebServerRequest *request) {
+static void K35_Web_get_handler(AsyncWebServerRequest *request) {
     String inputMessage;
     bool   bChange = false;
 
@@ -250,7 +261,7 @@ static void get_handler(AsyncWebServerRequest *request) {
 // 웹소켓 이벤트 핸들러 함수.
 // 클라이언트가 웹소켓에 연결, 메시지를 보냄, 연결을 끊음 등의 이벤트가 발생할 때 호출됩니다.
 // AWS(WebSocket) 이벤트 타입에 따라 다르게 처리합니다.
-void socket_event_handler(AsyncWebSocket       *server,
+void K35_WebSocket_event_handler(AsyncWebSocket       *server,
                           AsyncWebSocketClient *client,
                           AwsEventType            type,
                           void                   *arg,
@@ -270,7 +281,7 @@ void socket_event_handler(AsyncWebSocket       *server,
             break;
 
         case WS_EVT_DATA:                            // 클라이언트가 데이터를 보냈을 때
-            socket_handle_message(arg, data, len);    // 데이터 처리 함수 호출
+            K35_WebSocket_handle_message(arg, data, len);    // 데이터 처리 함수 호출
             break;
 
         case WS_EVT_PONG:    // PONG 메시지 (웹소켓에서 핑에 대한 응답) 발생 시
@@ -284,7 +295,7 @@ void socket_event_handler(AsyncWebSocket       *server,
 // 웹소켓을 통해 수신된 데이터를 분석하여 명령어를 처리합니다.
 // 메시지가 텍스트 형식(WS_TEXT)으로 전송되었는지 확인 후 처리합니다.
  
-void socket_handle_message(void *arg, uint8_t *data, size_t len) {
+void K35_WebSocket_handle_message(void *arg, uint8_t *data, size_t len) {
     AwsFrameInfo *info = (AwsFrameInfo *)arg;
 
     // 메시지가 완성되었고, 텍스트 형식이며, 길이가 맞는지 확인
@@ -297,14 +308,14 @@ void socket_handle_message(void *arg, uint8_t *data, size_t len) {
             // 'm' 명령어: 전류 및 전압 측정 모드 설정
             g_K10_Measure.mode               = G_K00_MEASURE_MODE_CURRENT_VOLTAGE;
             g_K10_Measure.m.cv_meas.nSamples = 1;                        // 샘플 수 설정
-            g_K10_Measure.m.cv_meas.cfg       = Config[1].reg;            // 측정 설정
-            g_K10_Measure.m.cv_meas.periodUs = Config[1].periodUs;    // 측정 주기 설정
+            g_K10_Measure.m.cv_meas.cfg       = g_K40_INA226_Config[1].reg;            // 측정 설정
+            g_K10_Measure.m.cv_meas.periodUs = g_K40_INA226_Config[1].periodUs;    // 측정 주기 설정
             g_K10_Measure.m.cv_meas.scale       = (int)(data[1] - '0');    // 스케일 설정
-            CVCaptureFlag               = true;                    // 전류/전압 캡처 플래그 설정
+            g_K40_INA226_CVCaptureFlag               = true;                    // 전류/전압 캡처 플래그 설정
         } else if (data[0] == 'f') {
             // 'f' 명령어: 주파수 측정 모드 설정
             g_K10_Measure.mode    = G_K00_MEASURE_MODE_FREQUENCY;
-            FreqCaptureFlag = true;     // 주파수 캡처 플래그 설정
+            g_K20_FreqCaptureFlag = true;     // 주파수 캡처 플래그 설정
         } else {
             JsonDocument json;
 
@@ -327,25 +338,25 @@ void socket_handle_message(void *arg, uint8_t *data, size_t len) {
 
                 int cfgIndex       = strtol(szCfgIndex, NULL, 10);           // 설정 인덱스 변환
                 int captureSeconds = strtol(szCaptureSeconds, NULL, 10);   // 캡처 시간 변환
-                int sampleRate       = 1000000 / Config[cfgIndex].periodUs;  // 샘플링 속도 계산
+                int sampleRate       = 1000000 / g_K40_INA226_Config[cfgIndex].periodUs;  // 샘플링 속도 계산
                 int numSamples       = captureSeconds * sampleRate;           // 총 샘플 수 계산
                 int scale           = strtol(szScale, NULL, 10);               // 스케일 변환
 
                 // 측정 모드 및 설정 적용
                 g_K10_Measure.mode               = G_K00_MEASURE_MODE_CURRENT_VOLTAGE;
-                g_K10_Measure.m.cv_meas.cfg       = Config[cfgIndex].reg;
+                g_K10_Measure.m.cv_meas.cfg       = g_K40_INA226_Config[cfgIndex].reg;
                 g_K10_Measure.m.cv_meas.scale       = scale;
                 g_K10_Measure.m.cv_meas.nSamples = numSamples;
-                g_K10_Measure.m.cv_meas.periodUs = Config[cfgIndex].periodUs;
+                g_K10_Measure.m.cv_meas.periodUs = g_K40_INA226_Config[cfgIndex].periodUs;
 
                 // 로그 출력
                 ESP_LOGI(G_K35_TAG, "Mode = %d", g_K10_Measure.mode);
                 ESP_LOGI(G_K35_TAG, "cfgIndex = %d", cfgIndex);
                 ESP_LOGI(G_K35_TAG, "scale = %d", scale);
                 ESP_LOGI(G_K35_TAG, "nSamples = %d", numSamples);
-                ESP_LOGI(G_K35_TAG, "periodUs = %d", Config[cfgIndex].periodUs);
+                ESP_LOGI(G_K35_TAG, "periodUs = %d", g_K40_INA226_Config[cfgIndex].periodUs);
 
-                CVCaptureFlag = true;  // 캡처 플래그 설정
+                g_K40_INA226_CVCaptureFlag = true;  // 캡처 플래그 설정
             }
             // 'oscfreq' 명령어: 주파수 측정 설정
             else if (strcmp(szAction, "oscfreq") == 0) {
