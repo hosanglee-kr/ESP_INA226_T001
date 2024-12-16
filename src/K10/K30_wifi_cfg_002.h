@@ -112,7 +112,7 @@ static void K30_wifi_start_as_station() {
  * 웹서버와 웹소켓 서버도 이 함수에서 초기화됩니다.
  */
 
-void K10_wifi_init() {
+void K30_wifi_init() {
 	delay(100);	 // 초기화 딜레이
 
 	// 저장된 SSID가 없으면 AP 모드로 시작
