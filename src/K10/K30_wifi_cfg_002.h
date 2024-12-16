@@ -6,6 +6,8 @@
 #include "K00_config_002.h"
 #include "K50_nv_data_002.h"
 
+extern OPTIONS_t g_K50_NV_Options; 
+
 static const char*	G_K30_TAG = "K30_wifi_cfg";	// ESP32 로그 태그
 
 
