@@ -82,7 +82,7 @@
 
 #include "K40_ina226_002.h"
 #include "K50_nv_data_002.h"
-
+extern OPTIONS_t g_K50_NV_Options; 
 
 static const char*    G_K35_TAG = "K25_WebSrv_cfg";    // ESP32 로그 태그
 
