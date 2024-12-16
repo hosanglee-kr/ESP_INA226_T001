@@ -132,7 +132,18 @@ void K35_WebSrv_init(){
 
     // 웹서버 핸들러 설정
     g_K35_pWebSrv->onNotFound(not_found_handler);                       // 잘못된 경로로의 요청을 처리하는 핸들러 (404 응답)
-    g_K35_pWebSrv->on("/", HTTP_GET, index_page_handler);               // 루트 경로("/")로의 GET 요청을 처리하는 핸들러 (홈페이지)
+
+    g_K35_pWebSrv->on(/, HTTP_GET, [](AsyncWebServerRequest *request) {
+        String v_logmessage = "Client:" + request->client()->remoteIP().toString() + " " + request->url();
+        //v_logmessage += " IR";
+        Serial.println(v_logmessage);
+
+        request->send(LittleFS, "/J10/index.html", String(), false, K30_string_processor);    // HTML 파일 전송 
+        // request->send(LittleFS, X35_URL_IR_UI1_USER_FILE, String(), false, X25_Set_HtmlVarable_CallBack);
+    });
+    // g_K35_pWebSrv->on("/", HTTP_GET, index_page_handler);               // 루트 경로("/")로의 GET 요청을 처리하는 핸들러 (홈페이지)
+
+    
     g_K35_pWebSrv->on("/defaults", HTTP_GET, set_defaults_handler);  // 설정 재설정 요청을 처리하는 핸들러
     g_K35_pWebSrv->on("/get", HTTP_GET, get_handler);                   // GET 요청을 처리하여 클라이언트에서 SSID 및 비밀번호 변경 가능
     g_K35_pWebSrv->on("/restart", HTTP_GET, restart_handler);           // ESP32 재시작 요청을 처리하는 핸들러
