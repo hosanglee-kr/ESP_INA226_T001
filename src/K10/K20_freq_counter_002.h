@@ -1,13 +1,18 @@
 // freq_counter.h 및 freq_counter.cpp 합본 파일
-#ifndef FREQ_METER_H_
-#define FREQ_METER_H_
+#pragma once
 
 #include <Arduino.h>
+
 #include <stdio.h>                            // 표준 입출력 라이브러리
 #include <driver/ledc.h>                      // ESP32 LEDC 라이브러리
 #include <soc/pcnt_struct.h>                  // Pulse Counter 관련 구조체
+
+//#include <driver/pulse_cnt.h>
 #include <driver/pcnt.h>                      // ESP32 PCNT (Pulse Counter) 라이브러리
-#include "config.h"                           // 프로젝트 설정 관련 헤더
+
+
+#include "K00_config_002.h"
+//#include "config.h"                           // 프로젝트 설정 관련 헤더
 
 
 // 주파수 측정 관련 전역 변수들
@@ -189,31 +194,32 @@ static char *ltos(long val, char *s, int radix) {
 	}
 #endif
 
-// 주파수 측정을 위한 타스크
-void K20_task_freq_counter(void* pvParam) {
-    ESP_LOGI(G_K20_TAG, "J300_task_freq_counter running on core %d with priority %d", xPortGetCoreID(), uxTaskPriorityGet(NULL));
 
-	FreqSemaphore = xSemaphoreCreateBinary(); // 주파수 측정 세마포어 생성
-	init_frequency_meter();                   // 주파수 측정기 초기화
-	
-	esp_timer_start_periodic(timer_handle, sample_time); // 주기적으로 타이머 시작
+#ifdef K20_FREQ_COUNTER_ENABLE
+    
+	// 주파수 측정을 위한 타스크
+	void K20_task_freq_counter(void* pvParam) {
+		ESP_LOGI(G_K20_TAG, "J300_task_freq_counter running on core %d with priority %d", xPortGetCoreID(), uxTaskPriorityGet(NULL));
 
-	while (true) {
-		if (OscFreqFlag) {
-			ledc_stop(LEDC_HIGH_SPEED_MODE, LEDC_CHANNEL_0, 0); // LEDC 타이머 정지
-			init_osc_freq();                      // 새로운 주파수로 초기화
-			OscFreqFlag = false;                  // 플래그 리셋
-		}
-		gpio_set_level(OUTPUT_CONTROL_GPIO, 1);   // 카운터 시작 (출력 제어 HIGH)
-		delayMicroseconds(500);                   // 0.5ms 지연
+		FreqSemaphore = xSemaphoreCreateBinary(); // 주파수 측정 세마포어 생성
+		init_frequency_meter();                   // 주파수 측정기 초기화
+		
+		esp_timer_start_periodic(timer_handle, sample_time); // 주기적으로 타이머 시작
 
-		if (xSemaphoreTake(FreqSemaphore, 2000 / portTICK_PERIOD_MS) == pdTRUE) {
-			FrequencyHz = ((multPulses * overflow) + pulses) / (sample_time / 1000000); // 주파수 계산
-			multPulses = 0;                       // overflow 카운터 초기화
-			FreqCaptureFlag = true;               // 주파수 캡처 완료 플래그 설정
+		while (true) {
+			if (OscFreqFlag) {
+				ledc_stop(LEDC_HIGH_SPEED_MODE, LEDC_CHANNEL_0, 0); // LEDC 타이머 정지
+				init_osc_freq();                      // 새로운 주파수로 초기화
+				OscFreqFlag = false;                  // 플래그 리셋
+			}
+			gpio_set_level(OUTPUT_CONTROL_GPIO, 1);   // 카운터 시작 (출력 제어 HIGH)
+			delayMicroseconds(500);                   // 0.5ms 지연
+
+			if (xSemaphoreTake(FreqSemaphore, 2000 / portTICK_PERIOD_MS) == pdTRUE) {
+				FrequencyHz = ((multPulses * overflow) + pulses) / (sample_time / 1000000); // 주파수 계산
+				multPulses = 0;                       // overflow 카운터 초기화
+				FreqCaptureFlag = true;               // 주파수 캡처 완료 플래그 설정
+			}
 		}
 	}
-}
-
-
-#endif // FREQ_METER_H_
+#endif

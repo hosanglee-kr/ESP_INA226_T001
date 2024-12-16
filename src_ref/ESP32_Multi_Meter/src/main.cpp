@@ -79,156 +79,149 @@ void reset_flags() {
 	LastPacketAckFlag = false;
 	}
 
-static void wifi_task(void* pVParameter) {
-    ESP_LOGD(TAG, "wifi_task running on core %d with priority %d", xPortGetCoreID(), uxTaskPriorityGet(NULL));
-	ESP_LOGI(TAG,"Starting web server");
-    // do NOT format, partition is built and flashed using 
-	// 1. PlatformIO Build FileSystem Image
-	// 2. Upload FileSystem Image    
-    if (!LittleFS.begin(false)) { 
-		ESP_LOGE(TAG, "Cannot mount LittleFS, Rebooting");
-		delay(1000);
-		ESP.restart();
-		}    
-	// initialize web server and web socket interface	
-	wifi_init();
-	int state = ST_IDLE;
-	int bufferOffset = 0;
-	int numBytes;
-	volatile int16_t* pb;
-	int16_t msg;
-	uint32_t t1, t2;
-	reset_flags();
+	static void wifi_task(void* pVParameter) {
+		ESP_LOGD(TAG, "wifi_task running on core %d with priority %d", xPortGetCoreID(), uxTaskPriorityGet(NULL));
+		ESP_LOGI(TAG, "Starting web server");
+		// do NOT format, partition is built and flashed using
+		// 1. PlatformIO Build FileSystem Image
+		// 2. Upload FileSystem Image
+		if (!LittleFS.begin(false)) {
+			ESP_LOGE(TAG, "Cannot mount LittleFS, Rebooting");
+			delay(1000);
+			ESP.restart();
+		}
+		// initialize web server and web socket interface
+		wifi_init();
+		int				  state		   = ST_IDLE;
+		int				  bufferOffset = 0;
+		int				  numBytes;
+		volatile int16_t* pb;
+		int16_t			  msg;
+		uint32_t		  t1, t2;
+		reset_flags();
 
-	while (1) {
-		vTaskDelay(1);
-		ws.cleanupClients();
-		if (SocketConnectedFlag == true) { 
-			switch (Measure.mode) {
-				default :
-				break;
-
-				case MODE_CURRENT_VOLTAGE :
-				switch (state) {
-					default :
-					break;
-
-					case ST_IDLE :
-					if (MeterReadyFlag == true) {
-						MeterReadyFlag = false;
-						LastPacketAckFlag = false;
-						numBytes = 5 * sizeof(int16_t);
-						ws.binary(ClientID, (uint8_t*)Buffer, numBytes);
-						state = ST_METER_COMPLETE; 
-						}
-					else					
-					if (GateOpenFlag){
-						GateOpenFlag = false;
-						ESP_LOGD(TAG,"Socket msg : Capture Gate Open");
-						msg = MSG_GATE_OPEN;
-						ws.binary(ClientID, (uint8_t*)&msg, 2); 
-						}	
-					else 
-					if (DataReadyFlag == true) {
-						DataReadyFlag = false;
-						ESP_LOGD(TAG,"Socket msg : Tx Start");		
-						numBytes = (3 + TxSamples*2)*sizeof(int16_t);
-						t1 = micros();
-						ws.binary(ClientID, (uint8_t*)Buffer, numBytes); 
-						bufferOffset += numBytes/2; // in uint16_ts
-						if (EndCaptureFlag == true) {
-							EndCaptureFlag = false;
-							state = ST_TX_COMPLETE;
-							}
-						else {
-							state = ST_TX;
-							}
-						}
-					break;
-
-					case ST_TX :
-					// wait for next packet ready and last packet receive acknowledgement 
-					// before transmitting next packet
-					if ((DataReadyFlag == true) && (LastPacketAckFlag == true)) {
-						LastPacketAckFlag = false;
-						DataReadyFlag = false;
-						t2 = micros();
-						ESP_LOGD(TAG,"Socket msg : %dus, Tx ...", t2-t1);
-						t1 = t2;
-						pb = Buffer + bufferOffset; 
-						numBytes = (1 + TxSamples*2)*sizeof(int16_t);
-						ws.binary(ClientID, (uint8_t*)pb, numBytes); 
-						bufferOffset += numBytes/2; // in uint16_ts
-						if (EndCaptureFlag == true) {
-							EndCaptureFlag = false;
-							state = ST_TX_COMPLETE;
-							}
-						}						
-					break;
-
-					case ST_TX_COMPLETE :
-					// wait for last packet receive acknowledgement before transmitting
-					// capture end message
-					if (LastPacketAckFlag == true) {
-						t2 = micros();
-						ESP_LOGD(TAG,"Socket msg : %dus, Tx ...", t2-t1);
-						ESP_LOGD(TAG,"Socket msg : Tx Complete");
-						msg = MSG_TX_COMPLETE;
-						ws.binary(ClientID, (uint8_t*)&msg, 2); 
-						reset_flags();
-						state = ST_IDLE;
-						TxSamples = 0;
-						bufferOffset = 0;
-						}
-					break;
-
-					case ST_METER_COMPLETE :
-					if (LastPacketAckFlag == true) {
-						reset_flags();
-						state = ST_IDLE;
-						}
-					break;					
-					}
-				break;
-			
-				case MODE_FREQUENCY :
-					switch (state) {
-						default :
+		while (1) {
+			vTaskDelay(1);
+			ws.cleanupClients();
+			if (SocketConnectedFlag == true) {
+				switch (Measure.mode) {
+					default:
 						break;
 
-						case ST_IDLE:
-						if (FreqReadyFlag == true) {
-							FreqReadyFlag = false;
-							LastPacketAckFlag = false;
-							int32_t buffer[2];
-							buffer[0] = MSG_TX_FREQUENCY;
-							buffer[1] = FrequencyHz;
-							numBytes = 2*sizeof(int32_t);
-							ws.binary(ClientID, (uint8_t*)buffer, numBytes);
-							state = ST_FREQ_COMPLETE; 
-							}
+					case MODE_CURRENT_VOLTAGE:
+						switch (state) {
+							default:
+								break;
+
+							case ST_IDLE:
+								if (MeterReadyFlag == true) {
+									MeterReadyFlag	  = false;
+									LastPacketAckFlag = false;
+									numBytes		  = 5 * sizeof(int16_t);
+									ws.binary(ClientID, (uint8_t*)Buffer, numBytes);
+									state = ST_METER_COMPLETE;
+								} else if (GateOpenFlag) {
+									GateOpenFlag = false;
+									ESP_LOGD(TAG, "Socket msg : Capture Gate Open");
+									msg = MSG_GATE_OPEN;
+									ws.binary(ClientID, (uint8_t*)&msg, 2);
+								} else if (DataReadyFlag == true) {
+									DataReadyFlag = false;
+									ESP_LOGD(TAG, "Socket msg : Tx Start");
+									numBytes = (3 + TxSamples * 2) * sizeof(int16_t);
+									t1		 = micros();
+									ws.binary(ClientID, (uint8_t*)Buffer, numBytes);
+									bufferOffset += numBytes / 2;  // in uint16_ts
+									if (EndCaptureFlag == true) {
+										EndCaptureFlag = false;
+										state		   = ST_TX_COMPLETE;
+									} else {
+										state = ST_TX;
+									}
+								}
+								break;
+
+							case ST_TX:
+								// wait for next packet ready and last packet receive acknowledgement
+								// before transmitting next packet
+								if ((DataReadyFlag == true) && (LastPacketAckFlag == true)) {
+									LastPacketAckFlag = false;
+									DataReadyFlag	  = false;
+									t2				  = micros();
+									ESP_LOGD(TAG, "Socket msg : %dus, Tx ...", t2 - t1);
+									t1		 = t2;
+									pb		 = Buffer + bufferOffset;
+									numBytes = (1 + TxSamples * 2) * sizeof(int16_t);
+									ws.binary(ClientID, (uint8_t*)pb, numBytes);
+									bufferOffset += numBytes / 2;  // in uint16_ts
+									if (EndCaptureFlag == true) {
+										EndCaptureFlag = false;
+										state		   = ST_TX_COMPLETE;
+									}
+								}
+								break;
+
+							case ST_TX_COMPLETE:
+								// wait for last packet receive acknowledgement before transmitting
+								// capture end message
+								if (LastPacketAckFlag == true) {
+									t2 = micros();
+									ESP_LOGD(TAG, "Socket msg : %dus, Tx ...", t2 - t1);
+									ESP_LOGD(TAG, "Socket msg : Tx Complete");
+									msg = MSG_TX_COMPLETE;
+									ws.binary(ClientID, (uint8_t*)&msg, 2);
+									reset_flags();
+									state		 = ST_IDLE;
+									TxSamples	 = 0;
+									bufferOffset = 0;
+								}
+								break;
+
+							case ST_METER_COMPLETE:
+								if (LastPacketAckFlag == true) {
+									reset_flags();
+									state = ST_IDLE;
+								}
+								break;
+						}
 						break;
 
-						case ST_FREQ_COMPLETE :
-						if (LastPacketAckFlag == true) {
-							reset_flags();
-							state = ST_IDLE;
-							}
-						break;					
+					case MODE_FREQUENCY:
+						switch (state) {
+							default:
+								break;
+
+							case ST_IDLE:
+								if (FreqReadyFlag == true) {
+									FreqReadyFlag	  = false;
+									LastPacketAckFlag = false;
+									int32_t buffer[2];
+									buffer[0] = MSG_TX_FREQUENCY;
+									buffer[1] = FrequencyHz;
+									numBytes  = 2 * sizeof(int32_t);
+									ws.binary(ClientID, (uint8_t*)buffer, numBytes);
+									state = ST_FREQ_COMPLETE;
+								}
+								break;
+
+							case ST_FREQ_COMPLETE:
+								if (LastPacketAckFlag == true) {
+									reset_flags();
+									state = ST_IDLE;
+								}
+								break;
 						}
-				break;
+						break;
 				}
-			}
-		else {
-			// socket disconnection, reset state and flags
-			reset_flags();
-			Measure.mode = MODE_INVALID;
-			state = ST_IDLE;
+			} else {
+				// socket disconnection, reset state and flags
+				reset_flags();
+				Measure.mode = MODE_INVALID;
+				state		 = ST_IDLE;
 			}
 		}
-	vTaskDelete(NULL);		
+		vTaskDelete(NULL);
 	}
-
 
 static void current_voltage_task(void* pvParameter)  {	
     ESP_LOGI(TAG, "current_voltage_task running on core %d with priority %d", xPortGetCoreID(), uxTaskPriorityGet(NULL));
@@ -265,49 +258,44 @@ static void current_voltage_task(void* pvParameter)  {
 	ina226_test_capture();	
 #endif
 
-	while (1){
-			if (CVCaptureFlag == true) {
-				CVCaptureFlag = false;
-				if (Measure.m.cv_meas.nSamples == 0) {
-					ESP_LOGD(TAG,"Capturing gated samples using cfg = 0x%04X, scale %d", Measure.m.cv_meas.cfg, Measure.m.cv_meas.scale );
-					ina226_capture_buffer_gated(Measure, Buffer);
-					}
-				else 
-				if (Measure.m.cv_meas.nSamples == 1) {
-					int scalemode = Measure.m.cv_meas.scale;
-					if (scalemode == SCALE_LO) {
-						ESP_LOGD(TAG,"Capturing meter sample using low scale");
-						Measure.m.cv_meas.scale = SCALE_LO;
-						bool res = ina226_capture_averaged_sample(Measure, Buffer, true);
-						if (!res) ESP_LOGD(TAG,"Warning : offscale reading");
-						}
-					else 
-					if (scalemode == SCALE_HI) {
-						ESP_LOGD(TAG,"Capturing meter sample using hi scale");
+	while (1) {
+		if (CVCaptureFlag == true) {
+			CVCaptureFlag = false;
+			if (Measure.m.cv_meas.nSamples == 0) {
+				ESP_LOGD(TAG, "Capturing gated samples using cfg = 0x%04X, scale %d", Measure.m.cv_meas.cfg, Measure.m.cv_meas.scale);
+				ina226_capture_buffer_gated(Measure, Buffer);
+			} else if (Measure.m.cv_meas.nSamples == 1) {
+				int scalemode = Measure.m.cv_meas.scale;
+				if (scalemode == SCALE_LO) {
+					ESP_LOGD(TAG, "Capturing meter sample using low scale");
+					Measure.m.cv_meas.scale = SCALE_LO;
+					bool res				= ina226_capture_averaged_sample(Measure, Buffer, true);
+					if (!res)
+						ESP_LOGD(TAG, "Warning : offscale reading");
+				} else if (scalemode == SCALE_HI) {
+					ESP_LOGD(TAG, "Capturing meter sample using hi scale");
+					Measure.m.cv_meas.scale = SCALE_HI;
+					bool res				= ina226_capture_averaged_sample(Measure, Buffer, true);
+					if (!res)
+						ESP_LOGD(TAG, "Warning : offscale reading");
+				} else {
+					ESP_LOGD(TAG, "Capturing meter sample autorange LO");
+					Measure.m.cv_meas.scale = SCALE_LO;
+					bool res				= ina226_capture_averaged_sample(Measure, Buffer, false);
+					if (!res) {
 						Measure.m.cv_meas.scale = SCALE_HI;
-						bool res = ina226_capture_averaged_sample(Measure, Buffer, true);
-						if (!res) ESP_LOGD(TAG,"Warning : offscale reading");
-						}
-					else {
-						ESP_LOGD(TAG,"Capturing meter sample autorange LO");
-						Measure.m.cv_meas.scale = SCALE_LO;
-						bool res = ina226_capture_averaged_sample(Measure, Buffer, false);
-						if (!res){
-							Measure.m.cv_meas.scale = SCALE_HI;
-							ESP_LOGD(TAG,"Capturing meter sample autorange HI");
-							res = ina226_capture_averaged_sample(Measure, Buffer, true);
-							if (!res) ESP_LOGD(TAG,"Warning : offscale reading");
-							}
-						}
-					}
-				else {
-					ESP_LOGD(TAG,"Capturing %d samples using cfg = 0x%04X, scale %d", Measure.m.cv_meas.nSamples, Measure.m.cv_meas.cfg, Measure.m.cv_meas.scale );
-					ina226_capture_buffer_triggered(Measure, Buffer);
+						ESP_LOGD(TAG, "Capturing meter sample autorange HI");
+						res = ina226_capture_averaged_sample(Measure, Buffer, true);
+						if (!res)
+							ESP_LOGD(TAG, "Warning : offscale reading");
 					}
 				}
-			vTaskDelay(1);
+			} else {
+				ESP_LOGD(TAG, "Capturing %d samples using cfg = 0x%04X, scale %d", Measure.m.cv_meas.nSamples, Measure.m.cv_meas.cfg, Measure.m.cv_meas.scale);
+				ina226_capture_buffer_triggered(Measure, Buffer);
 			}
-	vTaskDelete(NULL);		
+		}
+		vTaskDelay(1);
 	}
-
-
+	vTaskDelete(NULL);
+}

@@ -1,3 +1,4 @@
+
 /*
  * ESP32 Wi-Fi 및 웹소켓 기반 전력/전류 모니터링 시스템
  *
@@ -80,9 +81,9 @@
 #include "K50_nv_data_v2.h"
 
 
-static const char *G_K30_TAG = "wifi_cfg";	// ESP32 로그 태그
+static const char *G_K35_TAG = "K25_WebSrv_cfg";	// ESP32 로그 태그
 
-extern const char *FwRevision;	// 펌웨어 버전 정보
+extern const char *G_K10_Firmware_Rev;	// 펌웨어 버전 정보
 
 // 전역 변수 선언
 AsyncWebSocket	ws("/ws");		 // 웹소켓 서버 엔드포인트 설정
@@ -107,12 +108,14 @@ const char *szAPSSID = "ESP32_METER";  // 비밀번호 없는 Access Point 모�
 
 // 함수 선언
 void		  wifi_init();
-void		  socket_event_handler(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType type, void *arg, uint8_t *data, size_t len);
-void		  socket_handle_message(void *arg, uint8_t *data, size_t len);
 static void	  wifi_start_as_ap();
 static void	  wifi_start_as_station();
 static void	  wifi_start_as_station_static_IP();
-static String     string_processor(const String &var);
+
+void		  socket_event_handler(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType type, void *arg, uint8_t *data, size_t len);
+void		  socket_handle_message(void *arg, uint8_t *data, size_t len);
+
+static String     K30_string_processor(const String &var);
 static void	  not_found_handler(AsyncWebServerRequest *request);
 static void	  index_page_handler(AsyncWebServerRequest *request);
 static void	  set_defaults_handler(AsyncWebServerRequest *request);
@@ -127,9 +130,9 @@ static void	  capture_handler(AsyncWebServerRequest *request);
  * 동적으로 값을 반환합니다. 예를 들어 웹 페이지의 텍스트 중 %SSID%가 있다면,
  * 현재 설정된 SSID 값을 반환합니다.
  */
-static String string_processor(const String &var) {
+static String K30_string_processor(const String &var) {
 	if (var == "FW_REV") {	// 펌웨어 버전을 요청한 경우
-		return FwRevision;
+		return G_K10_Firmware_Rev;
 	} else if (var == "SSID") {	 // 현재 SSID를 요청한 경우
 		return Options.ssid;
 	} else if (var == "PASSWORD") {	 // 현재 WiFi 비밀번호를 요청한 경우
@@ -154,19 +157,19 @@ static void not_found_handler(AsyncWebServerRequest *request) {
  * "/index.html" 파일을 브라우저에 전송합니다.
  */
 static void index_page_handler(AsyncWebServerRequest *request) {
-	request->send(LittleFS, "/J10/index.html", String(), false, string_processor);	// HTML 파일 전송
+	request->send(LittleFS, "/J10/index.html", String(), false, K30_string_processor);	// HTML 파일 전송
 }
 
 static void cv_chart_handler(AsyncWebServerRequest *request) {
-    request->send(LittleFS, "/J10/cv_chart.html", String(), false, string_processor);
+    request->send(LittleFS, "/J10/cv_chart.html", String(), false, K30_string_processor);
     }
 
 static void cv_meter_handler(AsyncWebServerRequest *request) {
-    request->send(LittleFS, "/J10/cv_meter.html", String(), false, string_processor);
+    request->send(LittleFS, "/J10/cv_meter.html", String(), false, K30_string_processor);
     }
 
 static void freq_counter_handler(AsyncWebServerRequest *request) {
-    request->send(LittleFS, "/J10/freq_counter.html", String(), false, string_processor);
+    request->send(LittleFS, "/J10/freq_counter.html", String(), false, K30_string_processor);
     }
 
 /*
@@ -186,7 +189,7 @@ static void set_defaults_handler(AsyncWebServerRequest *request) {
  */
 static void restart_handler(AsyncWebServerRequest *request) {
 	request->send(200, "text/html", "Restarting ...");	// 클라이언트에 재시작 메시지 전송
-	ESP_LOGI(G_K30_TAG, "Restarting ESP32");			// 로그 메시지 출력
+	ESP_LOGI(G_K35_TAG, "Restarting ESP32");			// 로그 메시지 출력
 	Serial.flush();										// 직렬 통신 버퍼 비우기
 	delay(100);											// 잠시 대기 후
 	esp_restart();										// ESP32 재시작
@@ -218,7 +221,7 @@ static void get_handler(AsyncWebServerRequest *request) {
 
 	// 변경 사항이 있으면 옵션을 저장소에 저장
 	if (bChange) {
-		ESP_LOGI(G_K30_TAG, "Options changed");
+		ESP_LOGI(G_K35_TAG, "Options changed");
 		nv_options_store(Options);
 	}
 
@@ -232,11 +235,11 @@ static void get_handler(AsyncWebServerRequest *request) {
  * 사용자가 네트워크 설정을 입력하지 않았을 때 기본적으로 호출됩니다.
  */
 static void wifi_start_as_ap() {
-	ESP_LOGI(G_K30_TAG, "Starting Access Point with SSID=%s, no password\n", szAPSSID);	 // AP 시작 로그 출력
+	ESP_LOGI(G_K35_TAG, "Starting Access Point with SSID=%s, no password\n", szAPSSID);	 // AP 시작 로그 출력
 	WiFi.softAP(szAPSSID);																 // AP 모드 시작
 	IPAddress ipaddr = WiFi.softAPIP();													 // 할당된 AP IP 주소 가져오기
-	ESP_LOGI(G_K30_TAG, "Web Server IP address : %s", ipaddr.toString().c_str());		 // IP 주소 로그 출력
-	digitalWrite(pinLED, HIGH);															 // LED를 켜서 AP 모드 활성화 표시
+	ESP_LOGI(G_K35_TAG, "Web Server IP address : %s", ipaddr.toString().c_str());		 // IP 주소 로그 출력
+	digitalWrite(g_K00_PIN_LED, HIGH);															 // LED를 켜서 AP 모드 활성화 표시
 }
 
 /*
@@ -245,12 +248,12 @@ static void wifi_start_as_ap() {
  * 이 함수는 저장된 네트워크 정보로 자동 연결을 시도하며, 연결이 실패하면 AP 모드로 전환됩니다.
  */
 static void wifi_start_as_station_static_IP() {
-	ESP_LOGI(G_K30_TAG, "Connecting as station static IP to Access Point with SSID=%s\n", Options.ssid);  // 연결 시도 로그 출력
+	ESP_LOGI(G_K35_TAG, "Connecting as station static IP to Access Point with SSID=%s\n", Options.ssid);  // 연결 시도 로그 출력
 	uint32_t startTick = millis();																		  // 연결 시작 시간 기록
 
 	// 정적 IP 설정을 사용하여 네트워크 설정
 	if (!WiFi.config(Local_IP, Gateway, Subnet, PrimaryDNS, SecondaryDNS)) {
-		ESP_LOGI(G_K30_TAG, "Station static IP config failure");  // IP 설정 실패 시 로그 출력
+		ESP_LOGI(G_K35_TAG, "Station static IP config failure");  // IP 설정 실패 시 로그 출력
 	}
 
 	// 저장된 SSID와 비밀번호로 네트워크 연결 시도
@@ -258,13 +261,13 @@ static void wifi_start_as_station_static_IP() {
 
 	// 연결 대기 (4초)
 	if (WiFi.waitForConnectResult(4000UL) != WL_CONNECTED) {
-		ESP_LOGI(G_K30_TAG, "Connection failed!");	// 연결 실패 시 로그 출력
+		ESP_LOGI(G_K35_TAG, "Connection failed!");	// 연결 실패 시 로그 출력
 		wifi_start_as_ap();							// 연결 실패 시 AP 모드로 전환
 	} else {
 		IPAddress ipaddr  = WiFi.localIP();																									  // 연결된 IP 주소 가져오기
 		uint32_t  endTick = millis();																										  // 연결 종료 시간 기록
-		ESP_LOGI(G_K30_TAG, "Connected in %.2f seconds with IP addr %s", (float)(endTick - startTick) / 1000.0f, ipaddr.toString().c_str());  // 연결 시간 출력
-		digitalWrite(pinLED, LOW);																											  // 연결 성공 시 LED 끔
+		ESP_LOGI(G_K35_TAG, "Connected in %.2f seconds with IP addr %s", (float)(endTick - startTick) / 1000.0f, ipaddr.toString().c_str());  // 연결 시간 출력
+		digitalWrite(g_K00_PIN_LED, LOW);																											  // 연결 성공 시 LED 끔
 	}
 }
 
@@ -274,7 +277,7 @@ static void wifi_start_as_station_static_IP() {
  * 네트워크 연결에 성공하면 LED를 끄고, 실패하면 AP 모드로 전환합니다.
  */
 static void wifi_start_as_station() {
-	ESP_LOGI(G_K30_TAG, "Connecting as station to Access Point with SSID=%s", Options.ssid);  // 연결 시도 로그 출력
+	ESP_LOGI(G_K35_TAG, "Connecting as station to Access Point with SSID=%s", Options.ssid);  // 연결 시도 로그 출력
 	uint32_t startTick = millis();															  // 연결 시작 시간 기록
 
 	WiFi.mode(WIFI_STA);										 // 스테이션 모드로 설정
@@ -282,13 +285,13 @@ static void wifi_start_as_station() {
 
 	// 연결 대기 (10초)
 	if (WiFi.waitForConnectResult(10000UL) != WL_CONNECTED) {
-		ESP_LOGI(G_K30_TAG, "Connection failed!");	// 연결 실패 시 로그 출력
+		ESP_LOGI(G_K35_TAG, "Connection failed!");	// 연결 실패 시 로그 출력
 		wifi_start_as_ap();							// 실패하면 AP 모드로 전환
 	} else {
 		uint32_t  endTick = millis();																										  // 연결 종료 시간 기록
 		IPAddress ipaddr  = WiFi.localIP();																									  // 연결된 IP 주소 가져오기
-		ESP_LOGI(G_K30_TAG, "Connected in %.2f seconds with IP addr %s", (float)(endTick - startTick) / 1000.0f, ipaddr.toString().c_str());  // 연결 시간 로그 출력
-		digitalWrite(pinLED, LOW);																											  // 연결 성공 시 LED 끔
+		ESP_LOGI(G_K35_TAG, "Connected in %.2f seconds with IP addr %s", (float)(endTick - startTick) / 1000.0f, ipaddr.toString().c_str());  // 연결 시간 로그 출력
+		digitalWrite(g_K00_PIN_LED, LOW);																											  // 연결 성공 시 LED 끔
 	}
 }
 
@@ -310,12 +313,12 @@ void wifi_init() {
 
 	// mDNS 서비스 시작 (http://meter.local)
 	if (!MDNS.begin("meter")) {
-		ESP_LOGI(G_K30_TAG, "Error starting mDNS service");	 // mDNS 시작 실패 로그
+		ESP_LOGI(G_K35_TAG, "Error starting mDNS service");	 // mDNS 시작 실패 로그
 	}
 
 	pServer = new AsyncWebServer(80);  // HTTP 서버 생성 (포트 80)
 	if (pServer == nullptr) {
-		ESP_LOGE(G_K30_TAG, "Error creating AsyncWebServer!");	// 서버 생성 실패 시 로그 출력
+		ESP_LOGE(G_K35_TAG, "Error creating AsyncWebServer!");	// 서버 생성 실패 시 로그 출력
 		ESP.restart();											// 재시작
 	}
 
@@ -359,13 +362,13 @@ void socket_event_handler(AsyncWebSocket	   *server,
 						  size_t				len) {
 	switch (type) {
 		case WS_EVT_CONNECT:  // 클라이언트가 웹소켓에 연결되었을 때
-			ESP_LOGI(G_K30_TAG, "WebSocket client #%u connected from %s\n", client->id(), client->remoteIP().toString().c_str());
+			ESP_LOGI(G_K35_TAG, "WebSocket client #%u connected from %s\n", client->id(), client->remoteIP().toString().c_str());
 			ClientID			= client->id();	 // 클라이언트 ID 저장
 			SocketConnectedFlag = true;			 // 소켓 연결 플래그 설정
 			break;
 
 		case WS_EVT_DISCONNECT:	 // 클라이언트가 웹소켓 연결을 끊었을 때
-			ESP_LOGI(G_K30_TAG, "WebSocket client #%u disconnected\n", client->id());
+			ESP_LOGI(G_K35_TAG, "WebSocket client #%u disconnected\n", client->id());
 			SocketConnectedFlag = false;  // 소켓 연결 플래그 해제
 			ClientID			= 0;	  // 클라이언트 ID 초기화
 			break;
@@ -396,15 +399,15 @@ void socket_handle_message(void *arg, uint8_t *data, size_t len) {
 			LastPacketAckFlag = true;
 		} else if (data[0] == 'm') {
 			// 'm' 명령어: 전류 및 전압 측정 모드 설정
-			Measure.mode			   = MODE_CURRENT_VOLTAGE;
-			Measure.m.cv_meas.nSamples = 1;						// 샘플 수 설정
-			Measure.m.cv_meas.cfg	   = Config[1].reg;			// 측정 설정
-			Measure.m.cv_meas.periodUs = Config[1].periodUs;	// 측정 주기 설정
-			Measure.m.cv_meas.scale	   = (int)(data[1] - '0');	// 스케일 설정
+			g_K10_Measure.mode			   = G_K00_MEASURE_MODE_CURRENT_VOLTAGE;
+			g_K10_Measure.m.cv_meas.nSamples = 1;						// 샘플 수 설정
+			g_K10_Measure.m.cv_meas.cfg	   = Config[1].reg;			// 측정 설정
+			g_K10_Measure.m.cv_meas.periodUs = Config[1].periodUs;	// 측정 주기 설정
+			g_K10_Measure.m.cv_meas.scale	   = (int)(data[1] - '0');	// 스케일 설정
 			CVCaptureFlag			   = true;					// 전류/전압 캡처 플래그 설정
 		} else if (data[0] == 'f') {
 			// 'f' 명령어: 주파수 측정 모드 설정
-			Measure.mode	= MODE_FREQUENCY;
+			g_K10_Measure.mode	= G_K00_MEASURE_MODE_FREQUENCY;
 			FreqCaptureFlag = true;	 // 주파수 캡처 플래그 설정
 		} else {
 			// JSON 형식의 메시지 처리 (고급 명령어)
@@ -413,7 +416,7 @@ void socket_handle_message(void *arg, uint8_t *data, size_t len) {
 			// StaticJsonDocument<size> json;  // JSON 문서 생성
 			DeserializationError err = deserializeJson(json, data);	 // JSON 데이터 역직렬화
 			if (err) {
-				ESP_LOGI(G_K30_TAG, "deserializeJson() failed with code %s", err.c_str());	// 오류 시 로그 출력
+				ESP_LOGI(G_K35_TAG, "deserializeJson() failed with code %s", err.c_str());	// 오류 시 로그 출력
 				return;
 			}
 
@@ -432,28 +435,28 @@ void socket_handle_message(void *arg, uint8_t *data, size_t len) {
 				int scale		   = strtol(szScale, NULL, 10);			   // 스케일 변환
 
 				// 측정 모드 및 설정 적용
-				Measure.mode			   = MODE_CURRENT_VOLTAGE;
-				Measure.m.cv_meas.cfg	   = Config[cfgIndex].reg;
-				Measure.m.cv_meas.scale	   = scale;
-				Measure.m.cv_meas.nSamples = numSamples;
-				Measure.m.cv_meas.periodUs = Config[cfgIndex].periodUs;
+				g_K10_Measure.mode			   = G_K00_MEASURE_MODE_CURRENT_VOLTAGE;
+				g_K10_Measure.m.cv_meas.cfg	   = Config[cfgIndex].reg;
+				g_K10_Measure.m.cv_meas.scale	   = scale;
+				g_K10_Measure.m.cv_meas.nSamples = numSamples;
+				g_K10_Measure.m.cv_meas.periodUs = Config[cfgIndex].periodUs;
 
 				// 로그 출력
-				ESP_LOGI(G_K30_TAG, "Mode = %d", Measure.mode);
-				ESP_LOGI(G_K30_TAG, "cfgIndex = %d", cfgIndex);
-				ESP_LOGI(G_K30_TAG, "scale = %d", scale);
-				ESP_LOGI(G_K30_TAG, "nSamples = %d", numSamples);
-				ESP_LOGI(G_K30_TAG, "periodUs = %d", Config[cfgIndex].periodUs);
+				ESP_LOGI(G_K35_TAG, "Mode = %d", g_K10_Measure.mode);
+				ESP_LOGI(G_K35_TAG, "cfgIndex = %d", cfgIndex);
+				ESP_LOGI(G_K35_TAG, "scale = %d", scale);
+				ESP_LOGI(G_K35_TAG, "nSamples = %d", numSamples);
+				ESP_LOGI(G_K35_TAG, "periodUs = %d", Config[cfgIndex].periodUs);
 
 				CVCaptureFlag = true;  // 캡처 플래그 설정
 			}
 			// 'oscfreq' 명령어: 주파수 측정 설정
 			else if (strcmp(szAction, "oscfreq") == 0) {
-				Measure.mode			= MODE_FREQUENCY;
+				g_K10_Measure.mode			= G_K00_MEASURE_MODE_FREQUENCY;
 				const char *szOscFreqHz = json["freqhz"];
 
-				ESP_LOGI(G_K30_TAG, "json[\"action\"]= %s\n", szAction);	 // 액션 로그 출력
-				ESP_LOGI(G_K30_TAG, "json[\"freqhz\"]= %s\n", szOscFreqHz);	 // 주파수 로그 출력
+				ESP_LOGI(G_K35_TAG, "json[\"action\"]= %s\n", szAction);	 // 액션 로그 출력
+				ESP_LOGI(G_K35_TAG, "json[\"freqhz\"]= %s\n", szOscFreqHz);	 // 주파수 로그 출력
 
 				OscFreqHz	= (uint32_t)strtol(szOscFreqHz, NULL, 10);	// 주파수 값 변환
 				OscFreqFlag = true;										// 주파수 측정 플래그 설정
