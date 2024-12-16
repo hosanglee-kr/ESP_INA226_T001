@@ -58,7 +58,7 @@ static void K30_wifi_start_as_ap() {
  * 이 함수는 저장된 네트워크 정보로 자동 연결을 시도하며, 연결이 실패하면 AP 모드로 전환됩니다.
  */
 static void K30_wifi_start_as_station_static_IP() {
-	ESP_LOGI(G_K30_TAG, "Connecting as station static IP to Access Point with SSID=%s\n", Options.ssid);  // 연결 시도 로그 출력
+	ESP_LOGI(G_K30_TAG, "Connecting as station static IP to Access Point with SSID=%s\n", g_K50_NV_Options.ssid);  // 연결 시도 로그 출력
 	uint32_t startTick = millis();																		  // 연결 시작 시간 기록
 
 	// 정적 IP 설정을 사용하여 네트워크 설정
@@ -67,7 +67,7 @@ static void K30_wifi_start_as_station_static_IP() {
 	}
 
 	// 저장된 SSID와 비밀번호로 네트워크 연결 시도
-	WiFi.begin(Options.ssid.c_str(), Options.password.c_str());
+	WiFi.begin(g_K50_NV_Options.ssid.c_str(), g_K50_NV_Options.password.c_str());
 
 	// 연결 대기 (4초)
 	if (WiFi.waitForConnectResult(4000UL) != WL_CONNECTED) {
@@ -91,7 +91,7 @@ static void K30_wifi_start_as_station() {
 	uint32_t startTick = millis();															  // 연결 시작 시간 기록
 
 	WiFi.mode(WIFI_STA);										 // 스테이션 모드로 설정
-	WiFi.begin(Options.ssid.c_str(), Options.password.c_str());	 // 저장된 SSID와 비밀번호로 연결 시도
+	WiFi.begin(g_K50_NV_Options.ssid.c_str(), g_K50_NV_Options.password.c_str());	 // 저장된 SSID와 비밀번호로 연결 시도
 
 	// 연결 대기 (10초)
 	if (WiFi.waitForConnectResult(10000UL) != WL_CONNECTED) {
@@ -116,7 +116,7 @@ void K30_wifi_init() {
 	delay(100);	 // 초기화 딜레이
 
 	// 저장된 SSID가 없으면 AP 모드로 시작
-	if (Options.ssid == "") {
+	if (g_K50_NV_Options.ssid == "") {
 		K30_wifi_start_as_ap();
 	} else {
 		K30_wifi_start_as_station_static_IP();	// 있으면 고정 IP로 연결 시도
