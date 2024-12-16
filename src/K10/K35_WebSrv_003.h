@@ -158,9 +158,9 @@ static String K30_string_processor(const String &var) {
     if (var == "FW_REV") {    // 펌웨어 버전을 요청한 경우
         return G_K10_Firmware_Rev;
     } else if (var == "SSID") {     // 현재 SSID를 요청한 경우
-        return Options.ssid;
+        return g_K50_NV_Options.ssid;
     } else if (var == "PASSWORD") {     // 현재 WiFi 비밀번호를 요청한 경우
-        return Options.password;
+        return g_K50_NV_Options.password;
     } else {
         return "?";     // 해당하는 변수가 없을 경우
     }
@@ -198,7 +198,7 @@ static void freq_counter_handler(AsyncWebServerRequest *request) {
 // 네트워크 설정을 기본 값으로 재설정한 후, 웹페이지로 결과를 반환합니다.
 // 클라이언트는 설정이 초기화되었다는 메시지를 확인할 수 있습니다.
 static void set_defaults_handler(AsyncWebServerRequest *request) {
-    nv_options_reset(Options);                                                                          // 옵션을 기본 값으로 재설정
+    K50_NV_options_reset(g_K50_NV_Options);                                                                          // 옵션을 기본 값으로 재설정
     request->send(200, "text/html", "Default options set<br><a href=\"/\">Return to Home Page</a>");  // 설정 완료 메시지 전송
 }
 
@@ -225,20 +225,20 @@ static void get_handler(AsyncWebServerRequest *request) {
     if (request->hasParam("ssid")) {
         inputMessage = request->getParam("ssid")->value();
         bChange         = true;
-        Options.ssid = inputMessage;
+        g_K50_NV_Options.ssid = inputMessage;
     }
 
     // 요청에 패스워드 파라미터가 있으면 이를 새로운 패스워드로 저장
     if (request->hasParam("password")) {
         inputMessage     = request->getParam("password")->value();
         bChange             = true;
-        Options.password = inputMessage;
+        g_K50_NV_Options.password = inputMessage;
     }
 
     // 변경 사항이 있으면 옵션을 저장소에 저장
     if (bChange) {
         ESP_LOGI(G_K35_TAG, "Options changed");
-        nv_options_store(Options);
+        K50_NV_options_store(g_K50_NV_Options);
     }
 
     // 클라이언트에 처리 완료 메시지 전송
