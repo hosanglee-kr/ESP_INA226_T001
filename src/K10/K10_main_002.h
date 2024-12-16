@@ -97,7 +97,7 @@ void K10_init() {
     ESP_LOGI(G_K10_TAG, "arduino loopTask : setup() running on core %d with priority %d", xPortGetCoreID(), uxTaskPriorityGet(NULL));
 
     // 저장된 옵션을 불러오기 (Wi-Fi SSID, 비밀번호 등)
-    nv_options_load(Options);
+    K50_NV_options_load(g_K50_Options);
 
     // 기본 측정 모드 설정 (전류/전압 측정)
     g_K10_Measure.mode = G_K00_MEASURE_MODE_CURRENT_VOLTAGE;
