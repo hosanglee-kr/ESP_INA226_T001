@@ -87,7 +87,7 @@ static void K30_wifi_start_as_station_static_IP() {
  * 네트워크 연결에 성공하면 LED를 끄고, 실패하면 AP 모드로 전환합니다.
  */
 static void K30_wifi_start_as_station() {
-	ESP_LOGI(G_K30_TAG, "Connecting as station to Access Point with SSID=%s", Options.ssid);  // 연결 시도 로그 출력
+	ESP_LOGI(G_K30_TAG, "Connecting as station to Access Point with SSID=%s", g_K50_NV_Options.ssid);  // 연결 시도 로그 출력
 	uint32_t startTick = millis();															  // 연결 시작 시간 기록
 
 	WiFi.mode(WIFI_STA);										 // 스테이션 모드로 설정
