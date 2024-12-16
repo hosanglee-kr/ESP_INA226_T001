@@ -75,7 +75,11 @@
 
 #include "K00_config_002.h"
 //#include "config.h"
-#include "K20_freq_counter_002.h"
+
+// #ifdef K20_FREQ_COUNTER_ENABLE
+//     #include "K20_freq_counter_002.h"
+// #endif
+
 #include "K40_ina226_002.h"
 #include "K50_nv_data_002.h"
 
@@ -302,10 +306,11 @@ void socket_handle_message(void *arg, uint8_t *data, size_t len) {
             g_K10_Measure.mode    = G_K00_MEASURE_MODE_FREQUENCY;
             FreqCaptureFlag = true;     // 주파수 캡처 플래그 설정
         } else {
-            // JSON 형식의 메시지 처리 (고급 명령어)
             JsonDocument json;
+
             // const uint8_t size = JSON_OBJECT_SIZE(4);  // JSON 객체 크기 설정
             // StaticJsonDocument<size> json;  // JSON 문서 생성
+
             DeserializationError err = deserializeJson(json, data);     // JSON 데이터 역직렬화
             if (err) {
                 ESP_LOGI(G_K35_TAG, "deserializeJson() failed with code %s", err.c_str());    // 오류 시 로그 출력

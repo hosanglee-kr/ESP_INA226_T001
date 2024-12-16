@@ -15,13 +15,19 @@
 //     - 상태 플래그를 통해 데이터 전송 및 수신 상태 관리
 //     
 
+
 #include <Arduino.h>
 #include <FS.h>
 #include <LittleFS.h>
 #include <Wire.h>
 
 #include "K00_config_002.h"
-#include "K20_freq_counter_002.h"
+
+#define         K20_FREQ_COUNTER_ENABLE
+
+#ifdef K20_FREQ_COUNTER_ENABLE
+    #include "K20_freq_counter_002.h"
+#endif
 
 #include "K30_wifi_cfg_002.h"
 #include "K35_WebSrv_003.h"
@@ -98,8 +104,12 @@ void K10_init() {
 
     // Wi-Fi 태스크 생성 (코어 0에서 실행)
     xTaskCreatePinnedToCore(&K10_wifi_task, "wifi_task", 4096, NULL, G_K10_WIFI_TASK_PRIORITY, NULL, g_K10_CPU_CORE_0);
+    
     // 주파수 측정 태스크 생성 (코어 1에서 실행)
-    xTaskCreatePinnedToCore(&K20_task_freq_counter, "freq_task", 4096, NULL, G_K10_FREQUENCY_TASK_PRIORITY, NULL, g_K10_CPU_CORE_1);
+    #ifdef K20_FREQ_COUNTER_ENABLE
+        xTaskCreatePinnedToCore(&K20_task_freq_counter, "freq_task", 4096, NULL, G_K10_FREQUENCY_TASK_PRIORITY, NULL, g_K10_CPU_CORE_1);
+    #endif
+
     // 전류/전압 측정 태스크 생성 (코어 1에서 실행)
     xTaskCreatePinnedToCore(&K10_current_voltage_task, "cv_task", 4096, NULL, G_K10_CURRENT_VOLTAGE_TASK_PRIORITY, NULL, g_K10_CPU_CORE_1);
 
@@ -275,84 +285,12 @@ static void K10_wifi_task(void* pVParameter) {
                             break;
                     }
                     break;
-                }
             }
-            break;
-
-          case K10_ST_TX:                                                           // 데이터 전송 중 상태
-            if ((DataReadyFlag == true) && (LastPacketAckFlag == true)) {  // 데이터 준비 완료 및 마지막 패킷 ACK 수신
-                LastPacketAckFlag = false;
-                DataReadyFlag      = false;
-                t2          = micros();                                // 전송 완료 시간 기록
-                ESP_LOGD(G_K10_TAG, "Socket msg : %dus, Tx ...", t2 - t1);    // 전송 시간 출력
-                t1         = t2;                                                // 새로운 전송 시간 갱신
-                pb         = g_K10_Buffer + bufferOffset;                            // 전송할 데이터 버퍼
-                numBytes = (1 + TxSamples * 2) * sizeof(int16_t);            // 전송할 바이트 수 계산
-                ws.binary(ClientID, (uint8_t*)pb, numBytes);                // 웹소켓으로 데이터 전송
-                bufferOffset += numBytes / 2;                                // 버퍼 오프셋 갱신
-                if (EndCaptureFlag == true) {                                // 캡처 종료 플래그 확인
-                    EndCaptureFlag = false;
-                    g_K10_System_State = K10_ST_TX_COMPLETE;  // 전송 완료 상태로 전환
-                }
-             }
-             break;
-
-           case K10_ST_TX_COMPLETE:                  // 전송 완료 상태
-             if (LastPacketAckFlag == true) {  // 마지막 패킷에 대한 ACK 수신
-            t2 = micros();
-            ESP_LOGD(G_K10_TAG, "Socket msg : %dus, Tx ...", t2 - t1);
-            ESP_LOGD(G_K10_TAG, "Socket msg : Tx Complete");
-            msg = MSG_TX_COMPLETE;                     // 전송 완료 메시지
-            ws.binary(ClientID, (uint8_t*)&msg, 2);     // 클라이언트로 전송 완료 메시지 전송
-            K10_reset_flags();                             // 플래그 초기화
-            g_K10_System_State     = K10_ST_IDLE;                     // 대기 상태로 전환
-            TxSamples     = 0;                         // 전송할 샘플 수 초기화
-            bufferOffset = 0;                         // 버퍼 오프셋 초기화
-             }
-             break;
-
-           case K10_ST_METER_COMPLETE:                  // 전류/전압 측정 완료 상태
-             if (LastPacketAckFlag == true) {  // 마지막 패킷에 대한 ACK 수신
-            K10_reset_flags();                  // 플래그 초기화
-            g_K10_System_State = K10_ST_IDLE;              // 대기 상태로 전환
-             }
-             break;
-           }
-           break;
-
-        // 주파수 측정 모드 처리
-        case G_K00_MEASURE_MODE_FREQUENCY:
-          switch (g_K10_System_State) {
-            default:
-            break;
-
-            case K10_ST_IDLE:                      // 대기 상태
-            if (FreqReadyFlag == true) {  // 주파수 측정이 완료된 경우
-                FreqReadyFlag      = false;
-                LastPacketAckFlag = false;
-                int32_t buffer[2];
-                buffer[0] = MSG_TX_FREQUENCY;  // 주파수 전송 메시지
-                buffer[1] = FrequencyHz;       // 측정된 주파수 값
-                numBytes  = 2 * sizeof(int32_t);
-                ws.binary(ClientID, (uint8_t*)buffer, numBytes);  // 클라이언트로 주파수 데이터 전송
-                g_K10_System_State = K10_ST_FREQ_COMPLETE;                          // 주파수 전송 완료 상태로 전환
-            }
-            break;
-
-            case K10_ST_FREQ_COMPLETE:                  // 주파수 전송 완료 상태
-            if (LastPacketAckFlag == true) {  // 마지막 패킷에 대한 ACK 수신
-                K10_reset_flags();                  // 플래그 초기화
-                g_K10_System_State = K10_ST_IDLE;              // 대기 상태로 전환
-            }
-            break;
-            }
-            break;
-        }
-        } else {
-        // 소켓 연결 해제 시, 상태 및 플래그 초기화
-        K10_reset_flags();
-        g_K10_Measure.mode = G_K00_MEASURE_MODE_INVALID;  // 측정 모드를 무효로 설정
-        g_K10_System_State         = K10_ST_IDLE;          // 대기 상태로 전환
+		} else {
+            // 소켓 연결 해제 시, 상태 및 플래그 초기화
+            K10_reset_flags();
+            g_K10_Measure.mode = G_K00_MEASURE_MODE_INVALID;  // 측정 모드를 무효로 설정
+            g_K10_System_State         = K10_ST_IDLE;          // 대기 상태로 전환
         }
     }
     vTaskDelete(NULL);    // 태스크 종료
@@ -443,3 +381,81 @@ static void K10_current_voltage_task(void* pvParameter) {
     }
     vTaskDelete(NULL);    // 태스크 종료
 }
+
+
+
+
+
+
+/////////////////////
+
+         //break;
+
+			// case K10_ST_TX:													   // 데이터 전송 중 상태
+			// 	if ((DataReadyFlag == true) && (LastPacketAckFlag == true)) {  // 데이터 준비 완료 및 마지막 패킷 ACK 수신
+			// 		LastPacketAckFlag = false;
+			// 		DataReadyFlag	  = false;
+			// 		t2				  = micros();								// 전송 완료 시간 기록
+			// 		ESP_LOGD(G_K10_TAG, "Socket msg : %dus, Tx ...", t2 - t1);	// 전송 시간 출력
+			// 		t1		 = t2;												// 새로운 전송 시간 갱신
+			// 		pb		 = g_K10_Buffer + bufferOffset;						// 전송할 데이터 버퍼
+			// 		numBytes = (1 + TxSamples * 2) * sizeof(int16_t);			// 전송할 바이트 수 계산
+			// 		ws.binary(ClientID, (uint8_t*)pb, numBytes);				// 웹소켓으로 데이터 전송
+			// 		bufferOffset += numBytes / 2;								// 버퍼 오프셋 갱신
+			// 		if (EndCaptureFlag == true) {								// 캡처 종료 플래그 확인
+			// 			EndCaptureFlag	   = false;
+			// 			g_K10_System_State = K10_ST_TX_COMPLETE;  // 전송 완료 상태로 전환
+			// 		}
+			// 	}
+			// 	break;
+
+			// case K10_ST_TX_COMPLETE:			  // 전송 완료 상태
+			// 	if (LastPacketAckFlag == true) {  // 마지막 패킷에 대한 ACK 수신
+			// 		t2 = micros();
+			// 		ESP_LOGD(G_K10_TAG, "Socket msg : %dus, Tx ...", t2 - t1);
+			// 		ESP_LOGD(G_K10_TAG, "Socket msg : Tx Complete");
+			// 		msg = MSG_TX_COMPLETE;					 // 전송 완료 메시지
+			// 		ws.binary(ClientID, (uint8_t*)&msg, 2);	 // 클라이언트로 전송 완료 메시지 전송
+			// 		K10_reset_flags();						 // 플래그 초기화
+			// 		g_K10_System_State = K10_ST_IDLE;		 // 대기 상태로 전환
+			// 		TxSamples		   = 0;					 // 전송할 샘플 수 초기화
+			// 		bufferOffset	   = 0;					 // 버퍼 오프셋 초기화
+			// 	}
+			// 	break;
+
+			// case K10_ST_METER_COMPLETE:				   // 전류/전압 측정 완료 상태
+			// 	if (LastPacketAckFlag == true) {	   // 마지막 패킷에 대한 ACK 수신
+			// 		K10_reset_flags();				   // 플래그 초기화
+			// 		g_K10_System_State = K10_ST_IDLE;  // 대기 상태로 전환
+			// 	}
+			// 	break;
+        //}
+        //break;
+
+	// // 주파수 측정 모드 처리
+	// case G_K00_MEASURE_MODE_FREQUENCY:
+	// 	switch (g_K10_System_State) {
+	// 		default:
+	// 			break;
+
+	// 		case K10_ST_IDLE:				  // 대기 상태
+	// 			if (FreqReadyFlag == true) {  // 주파수 측정이 완료된 경우
+	// 				FreqReadyFlag	  = false;
+	// 				LastPacketAckFlag = false;
+	// 				int32_t buffer[2];
+	// 				buffer[0] = MSG_TX_FREQUENCY;  // 주파수 전송 메시지
+	// 				buffer[1] = FrequencyHz;	   // 측정된 주파수 값
+	// 				numBytes  = 2 * sizeof(int32_t);
+	// 				ws.binary(ClientID, (uint8_t*)buffer, numBytes);  // 클라이언트로 주파수 데이터 전송
+	// 				g_K10_System_State = K10_ST_FREQ_COMPLETE;		  // 주파수 전송 완료 상태로 전환
+	// 			}
+	// 			break;
+
+	// 		case K10_ST_FREQ_COMPLETE:				   // 주파수 전송 완료 상태
+	// 			if (LastPacketAckFlag == true) {	   // 마지막 패킷에 대한 ACK 수신
+	// 				K10_reset_flags();				   // 플래그 초기화
+	// 				g_K10_System_State = K10_ST_IDLE;  // 대기 상태로 전환
+	// 			}
+	// 			break;
+	// 	}
+	// 	break;
