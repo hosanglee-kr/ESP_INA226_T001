@@ -7,8 +7,8 @@
 #include <driver/ledc.h>                      // ESP32 LEDC 라이브러리
 #include <soc/pcnt_struct.h>                  // Pulse Counter 관련 구조체
 
-#include <driver/pulse_cnt.h>
-//#include <driver/pcnt.h>                      // ESP32 PCNT (Pulse Counter) 라이브러리
+//#include <driver/pulse_cnt.h>
+#include <driver/pcnt.h>                      // ESP32 PCNT (Pulse Counter) 라이브러리
 
 
 #include "K00_config_002.h"
