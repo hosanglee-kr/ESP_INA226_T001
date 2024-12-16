@@ -35,6 +35,8 @@
 #include "K40_ina226_002.h"
 #include "K50_nv_data_002.h"
 
+extern OPTIONS_t g_K50_NV_Options; 
+
 // 펌웨어 버전 및 로그 태그 설정
 const char*        G_K10_Firmware_Rev = "0.97";
 static const char*     G_K10_TAG  = "K10_main";
