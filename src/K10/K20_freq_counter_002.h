@@ -16,8 +16,8 @@
 
 
 // 주파수 측정 관련 전역 변수들
-volatile bool FreqReadyFlag = false;          // 주파수 측정 완료 플래그
-volatile bool FreqCaptureFlag = false;        // 주파수 캡처 플래그
+volatile bool g_K20_FreqReadyFlag = false;          // 주파수 측정 완료 플래그
+volatile bool g_K20_FreqCaptureFlag = false;        // 주파수 캡처 플래그
 volatile int  FrequencyHz = 0;                // 측정된 주파수 값 (Hz)
 
 volatile SemaphoreHandle_t FreqSemaphore;     // 주파수 측정 완료를 위한 세마포어
@@ -218,7 +218,7 @@ static char *ltos(long val, char *s, int radix) {
 			if (xSemaphoreTake(FreqSemaphore, 2000 / portTICK_PERIOD_MS) == pdTRUE) {
 				FrequencyHz = ((multPulses * overflow) + pulses) / (sample_time / 1000000); // 주파수 계산
 				multPulses = 0;                       // overflow 카운터 초기화
-				FreqCaptureFlag = true;               // 주파수 캡처 완료 플래그 설정
+				g_K20_FreqCaptureFlag = true;               // 주파수 캡처 완료 플래그 설정
 			}
 		}
 	}
